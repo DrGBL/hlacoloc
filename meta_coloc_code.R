@@ -20,7 +20,8 @@ max_iter_susieR=10000
 
 meta_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1,
                      pheno2,pheno2R,is_cohort_ld_pheno2,
-                     max_iter_susieR,plot_susie=TRUE){
+                     max_iter_susieR,plot_susie=TRUE,
+                     negative_threshold=0.001){
   
   if( length(which(!pheno1$Name %in% pheno2$Name)) > 0 |
       length(which(!pheno2$Name %in% pheno1$Name)) > 0){
@@ -69,26 +70,35 @@ meta_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1,
     posteriors_fit<-c()
     posteriors_ci<-c()
     for(g in (full_final %>% pull(gene) %>% unique())){
-      bayes_lm<-stan_glm(pip_pheno2~pip_pheno1, data=full_final %>% filter(gene==g),family = gaussian(link = "identity"))
-      
-      posteriors_ci<-as.data.frame(as.matrix(bayes_lm)) %>%
-        mutate(gene=g) %>%
-        rename(alpha=`(Intercept)`) %>%
-        rename(beta=pip_pheno1) %>%
-        head(n=100) %>%
-        bind_rows(posteriors_ci,.)
-      
-      posteriors_fit<-data.frame(alpha=bayes_lm$coefficients[1],
-                                 beta=bayes_lm$coefficients[2],
-                                 gene=g) %>%
-        bind_rows(posteriors_fit,.)
-      
-      bayes_corr_df<-data.frame(gene=g,
-                                bayes_pd=p_direction(bayes_lm)$pd[2],
-                                direction_of_correlation=ifelse(bayes_lm$coefficients[2] >= 0,
-                                                                "Correct",
-                                                                "Incorrect")) %>%
-        bind_rows(bayes_corr_df,.)
+      dat_tmp<-full_final %>% filter(gene==g)
+      if(length(which(dat_tmp$pip_pheno1 > negative_threshold)) > 0 &
+         length(which(dat_tmp$pip_pheno2 > negative_threshold)) > 0){
+        bayes_lm<-stan_glm(pip_pheno2~pip_pheno1, data=dat_tmp,family = gaussian(link = "identity"))
+        
+        posteriors_ci<-as.data.frame(as.matrix(bayes_lm)) %>%
+          mutate(gene=g) %>%
+          rename(alpha=`(Intercept)`) %>%
+          rename(beta=pip_pheno1) %>%
+          head(n=100) %>%
+          bind_rows(posteriors_ci,.)
+        
+        posteriors_fit<-data.frame(alpha=bayes_lm$coefficients[1],
+                                   beta=bayes_lm$coefficients[2],
+                                   gene=g) %>%
+          bind_rows(posteriors_fit,.)
+        
+        bayes_corr_df<-data.frame(gene=g,
+                                  bayes_pd=p_direction(bayes_lm)$pd[2],
+                                  direction_of_correlation=ifelse(bayes_lm$coefficients[2] >= 0,
+                                                                  "Correct",
+                                                                  "Incorrect")) %>%
+          bind_rows(bayes_corr_df,.)
+      } else {
+        bayes_corr_df<-data.frame(gene=g,
+                                  bayes_pd=0,
+                                  direction_of_correlation="Not applicable") %>%
+          bind_rows(bayes_corr_df,.)
+      }
     }
     
     #build a summary table
@@ -103,7 +113,6 @@ meta_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1,
     
     
     if(plot_susie==TRUE){
-      #ebna
       reg_coloc<-full_final %>%
         ggplot(aes(x=beta1,y=beta2))+
         geom_point()+
