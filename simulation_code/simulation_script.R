@@ -34,7 +34,13 @@ option_list = list(
   make_option(c("--plot_susie"), type="logical", default=FALSE,
               help="Whether to plot the susie PIPs or not. Useful to visualize the pearson correlation. Default=FALSE.", metavar="logical"),
   make_option(c("--iteration"), type="numeric", default=1,
-              help="Iteration number. This has no impact on the simulation, it's just a way to keep track of things in the output.", metavar="numeric")
+              help="Iteration number. This has no impact on the simulation, it's just a way to keep track of things in the output.", metavar="numeric"),
+  make_option(c("--continuous_trait"), type="logical", default=TRUE,
+              help="Whether the traits are continuous (TRUE, default) or binary (FALSE).", metavar="logical"),
+  make_option(c("--n_clone"), type="numeric", default=1,
+              help="Number of times to clone the cohort, helpful for case control studies simulations where power is limited", metavar="numeric"),
+  make_option(c("--susie_L"), type="numeric", default=10,
+              help="Maximum number of non-zero effects in the susie regression model. Default = 10", metavar="numeric")
 );
 
 opt_parser = OptionParser(option_list=option_list);
@@ -146,6 +152,9 @@ genes<-genes %>%
 # all_causal_alleles=FALSE
 # plot_susie=FALSE
 # all_causal_genes=FALSE
+# continuous_trait=FALSE
+# negative_threshold=0.001
+# n_clone=10
 
 simulate_hla<-function(n_min_alleles=10,
                        pheno2_mean_shared_factor=0,
@@ -158,7 +167,11 @@ simulate_hla<-function(n_min_alleles=10,
                        genes=genes,
                        all_causal_alleles=FALSE,
                        all_causal_genes=FALSE,
-                       plot_susie=FALSE){
+                       plot_susie=FALSE,
+                       continuous_trait=TRUE,
+                       negative_threshold=0.001,
+                       n_clone=1,
+                       susie_L=10){
   
   #apply frequency and allele number thresholds to obtain list of genes to simulate
   genes_filtered<-genes %>%
@@ -337,13 +350,43 @@ simulate_hla<-function(n_min_alleles=10,
     pheno_sims$pheno2[i]<-sum(alleles_tmp$causal_effect_pheno2, na.rm=TRUE)
   }
   
+  #clone the samples to increase power
+  if(continuous_trait==FALSE){
+    pheno_sims_orig<-pheno_sims
+    haplotypes_lm_orig<-haplotypes_lm
+    for(i in 1:n_clone){
+      pheno_sims<-pheno_sims_orig %>%
+        mutate(ID=paste(ID,"_",i)) %>%
+        bind_rows(pheno_sims,.)
+      haplotypes_lm<-haplotypes_lm_orig %>%
+        mutate(ID=paste(ID,"_",i)) %>%
+        bind_rows(haplotypes_lm,.)
+    }
+  }
+  
   #add error term so that the causal genes explain roughly 40% of variance (value can be changed above, but 40% is default)
   
   var1<-var(pheno_sims$pheno1)
   var2<-var(pheno_sims$pheno2)
   
-  pheno_sims$pheno1_rand<-pheno_sims$pheno1+rnorm(nrow(pheno_sims),0,sqrt(var1/gen_var))
-  pheno_sims$pheno2_rand<-pheno_sims$pheno2+rnorm(nrow(pheno_sims),0,sqrt(var2/gen_var))
+  pheno_sims$pheno1_rand<-pheno_sims$pheno1+rnorm(nrow(pheno_sims),0,sqrt(var1*(1-gen_var)/gen_var))
+  pheno_sims$pheno2_rand<-pheno_sims$pheno2+rnorm(nrow(pheno_sims),0,sqrt(var2*(1-gen_var)/gen_var))
+  
+  #if binary trait, turn these into 0 or 1
+  if(continuous_trait==FALSE){
+    pheno_sims$pheno_invlogit1<-invlogit(pheno_sims$pheno1_rand)
+    pheno_sims$pheno_invlogit2<-invlogit(pheno_sims$pheno2_rand)
+    pheno_sims$pheno1_binary<-rbernoulli(nrow(pheno_sims),pheno_sims$pheno_invlogit1)
+    pheno_sims$pheno2_binary<-rbernoulli(nrow(pheno_sims),pheno_sims$pheno_invlogit2)
+    
+    
+    
+    
+    #pheno_sims<-pheno_sims %>% arrange(pheno1_rand)
+    #pheno_sims$pheno1_binary<-c(rep(0,floor(nrow(pheno_sims)*0.6)), rep(1,nrow(pheno_sims)-floor(nrow(pheno_sims)*0.6)))
+    #pheno_sims<-pheno_sims %>% arrange(pheno2_rand)
+    #pheno_sims$pheno2_binary<-c(rep(0,floor(nrow(pheno_sims)*0.6)), rep(1,nrow(pheno_sims)-floor(nrow(pheno_sims)*0.6)))
+  }
   
   #now run gwas of HLA alleles on both phenotypes
   gwas_res<-matrix(NA,nrow=ncol(haplotypes_lm)-1,ncol=7)
@@ -352,69 +395,154 @@ simulate_hla<-function(n_min_alleles=10,
   gwas_res$allele<-colnames(haplotypes_lm[,-1])
   gwas_res<-gwas_res %>%
     filter(allele %in% effect$allele)
-  for(i in 1:nrow(gwas_res)){
-    if(i %% 100==0){
-      print(paste0(i, " of ", nrow(gwas_res), "."))
+  if(continuous_trait==TRUE){
+    for(i in 1:nrow(gwas_res)){
+      if(i %% 100==0){
+        print(paste0(i, " of ", nrow(gwas_res), "."))
+      }
+      lm_1<-lm(scale(pheno_sims$pheno1_rand)~haplotypes_lm[,gwas_res$allele[i]])
+      lm_2<-lm(scale(pheno_sims$pheno2_rand)~haplotypes_lm[,gwas_res$allele[i]])
+      
+      gwas_res$beta1[i]<-coefficients(lm_1)[2]
+      gwas_res$se1[i]<-sqrt(diag(vcov(lm_1)))[2]
+      gwas_res$pval1[i]<-summary(lm_1)$coefficients[2,4]
+      gwas_res$beta2[i]<-coefficients(lm_2)[2]
+      gwas_res$se2[i]<-sqrt(diag(vcov(lm_2)))[2]
+      gwas_res$pval2[i]<-summary(lm_2)$coefficients[2,4]
     }
-    lm_1<-lm(scale(pheno_sims$pheno1_rand)~haplotypes_lm[,gwas_res$allele[i]])
-    lm_2<-lm(scale(pheno_sims$pheno2_rand)~haplotypes_lm[,gwas_res$allele[i]])
     
-    gwas_res$beta1[i]<-coefficients(lm_1)[2]
-    gwas_res$se1[i]<-sqrt(diag(vcov(lm_1)))[2]
-    gwas_res$pval1[i]<-summary(lm_1)$coefficients[2,4]
-    gwas_res$beta2[i]<-coefficients(lm_2)[2]
-    gwas_res$se2[i]<-sqrt(diag(vcov(lm_2)))[2]
-    gwas_res$pval2[i]<-summary(lm_2)$coefficients[2,4]
+    gwas_res<-gwas_res %>%
+      mutate(gene=str_extract(allele,"^[A-Z0-9]*")) %>%
+      mutate(weight=1/(se1^2+se2^2)) %>%
+      left_join(.,genes)
+    
+    min_p_pheno1<-gwas_res %>%
+      arrange(pval1) %>%
+      group_by(gene) %>%
+      filter(row_number()==1) %>%
+      ungroup() %>%
+      rename(min_pval_pheno1=pval1) %>%
+      dplyr::select(c(gene,min_pval_pheno1))
+    
+    min_p_pheno2<-gwas_res %>%
+      arrange(pval1) %>%
+      group_by(gene) %>%
+      filter(row_number()==1) %>%
+      ungroup() %>%
+      rename(min_pval_pheno2=pval2) %>%
+      dplyr::select(c(gene,min_pval_pheno2))
+    
+    #variances explained by each genes on each phenotype
+    varexp<-data.frame(gene=genes_to_keep,
+                       r2_1=NA,
+                       adj_r2_1=NA,
+                       r2_2=NA,
+                       adj_r2_2=NA,
+                       role="beta")
+    for(i in 1:nrow(varexp)){
+      alleles_tmp<-effect %>%
+        filter(gene==varexp$gene[i]) %>%
+        mutate(allele=paste0("haplotypes_lm[,'",
+                             allele,
+                             "']")) %>%
+        pull(allele)
+      
+      
+      form_tmp1<-paste0("scale(pheno_sims$pheno1_rand)~",
+                        paste(alleles_tmp,collapse="+"))
+      mod_tmp1<-lm(as.formula(form_tmp1))
+      varexp$r2_1[i]<-summary(mod_tmp1)$r.squared
+      varexp$adj_r2_1[i]<-summary(mod_tmp1)$adj.r.squared
+      
+      form_tmp2<-paste0("scale(pheno_sims$pheno2_rand)~",
+                        paste(alleles_tmp,collapse="+"))
+      mod_tmp2<-lm(as.formula(form_tmp2))
+      varexp$r2_2[i]<-summary(mod_tmp2)$r.squared
+      varexp$adj_r2_2[i]<-summary(mod_tmp2)$adj.r.squared
+      
+    } 
+  } else {
+    for(i in 1:nrow(gwas_res)){
+      if(i %% 100==0){
+        print(paste0(i, " of ", nrow(gwas_res), "."))
+      }
+      glm_1<-glm(pheno_sims$pheno1_binary~haplotypes_lm[,gwas_res$allele[i]],family=binomial(link="logit"))
+      glm_2<-glm(pheno_sims$pheno2_binary~haplotypes_lm[,gwas_res$allele[i]],family=binomial(link="logit"))
+      
+      gwas_res$beta1[i]<-coefficients(glm_1)[2]
+      gwas_res$se1[i]<-sqrt(diag(vcov(glm_1)))[2]
+      gwas_res$pval1[i]<-summary(glm_1)$coefficients[2,4]
+      gwas_res$beta2[i]<-coefficients(glm_2)[2]
+      gwas_res$se2[i]<-sqrt(diag(vcov(glm_2)))[2]
+      gwas_res$pval2[i]<-summary(glm_2)$coefficients[2,4]
+    }
+    
+    gwas_res<-gwas_res %>%
+      mutate(gene=str_extract(allele,"^[A-Z0-9]*")) %>%
+      mutate(weight=1/(se1^2+se2^2)) %>%
+      left_join(.,genes)
+    
+    min_p_pheno1<-gwas_res %>%
+      arrange(pval1) %>%
+      group_by(gene) %>%
+      filter(row_number()==1) %>%
+      ungroup() %>%
+      rename(min_pval_pheno1=pval1) %>%
+      dplyr::select(c(gene,min_pval_pheno1))
+    
+    min_p_pheno2<-gwas_res %>%
+      arrange(pval1) %>%
+      group_by(gene) %>%
+      filter(row_number()==1) %>%
+      ungroup() %>%
+      rename(min_pval_pheno2=pval2) %>%
+      dplyr::select(c(gene,min_pval_pheno2))
+    
+    #variances explained by each genes on each phenotype
+    varexp<-data.frame(gene=genes_to_keep,
+                       r2_1=NA,
+                       adj_r2_1=NA,
+                       r2_2=NA,
+                       adj_r2_2=NA,
+                       role="beta")
+    for(i in 1:nrow(varexp)){
+      alleles_tmp<-effect %>%
+        filter(gene==varexp$gene[i]) %>%
+        mutate(allele=paste0("haplotypes_lm[,'",
+                             allele,
+                             "']")) %>%
+        pull(allele)
+      
+      
+      form_tmp1<-paste0("pheno_sims$pheno1_binary~",
+                        paste(alleles_tmp,collapse="+"))
+      mod_tmp1<-glm(as.formula(form_tmp1), family=binomial(link="logit"))
+      varexp$r2_1[i]<-1 - summary(mod_tmp1)$deviance/summary(mod_tmp1)$null.deviance
+      
+      form_tmp2<-paste0("pheno_sims$pheno2_binary~",
+                        paste(alleles_tmp,collapse="+"))
+      mod_tmp2<-glm(as.formula(form_tmp2), family=binomial(link="logit"))
+      varexp$r2_2[i]<-1 - summary(mod_tmp2)$deviance/summary(mod_tmp2)$null.deviance
+      
+    }
   }
   
-  gwas_res<-gwas_res %>%
-    mutate(gene=str_extract(allele,"^[A-Z0-9]*")) %>%
-    mutate(weight=1/(se1^2+se2^2)) %>%
-    left_join(.,genes)
-  
-  #variances explained by each genes on each phenotype
-  varexp<-data.frame(gene=genes_to_keep,
-                     r2_1=NA,
-                     adj_r2_1=NA,
-                     r2_2=NA,
-                     adj_r2_2=NA,
-                     role="beta")
-  for(i in 1:nrow(varexp)){
-    alleles_tmp<-effect %>%
-      filter(gene==varexp$gene[i]) %>%
-      mutate(allele=paste0("haplotypes_lm[,'",
-                           allele,
-                           "']")) %>%
-      pull(allele)
-    
-    
-    form_tmp1<-paste0("scale(pheno_sims$pheno1_rand)~",
-                      paste(alleles_tmp,collapse="+"))
-    mod_tmp1<-lm(as.formula(form_tmp1))
-    varexp$r2_1[i]<-summary(mod_tmp1)$r.squared
-    varexp$adj_r2_1[i]<-summary(mod_tmp1)$adj.r.squared
-    
-    form_tmp2<-paste0("scale(pheno_sims$pheno2_rand)~",
-                      paste(alleles_tmp,collapse="+"))
-    mod_tmp2<-lm(as.formula(form_tmp2))
-    varexp$r2_2[i]<-summary(mod_tmp2)$r.squared
-    varexp$adj_r2_2[i]<-summary(mod_tmp2)$adj.r.squared
-    
-  }
   
   #susie pheno1
   susie1<-susieR::susie_rss(R=ld_filtered,
                             bhat=left_join(effect %>% dplyr::select(allele),gwas_res)$beta1,
                             shat=left_join(effect %>% dplyr::select(allele),gwas_res)$se1,
                             n=nrow(pheno_sims),
-                            estimate_residual_variance=TRUE)
+                            estimate_residual_variance=TRUE,
+                            L=susie_L)
   
   #susie pheno2
   susie2<-susieR::susie_rss(R=ld_filtered,
                             bhat=left_join(effect %>% dplyr::select(allele),gwas_res)$beta2,
                             shat=left_join(effect %>% dplyr::select(allele),gwas_res)$se2,
                             n=nrow(pheno_sims),
-                            estimate_residual_variance=TRUE)
+                            estimate_residual_variance=TRUE,
+                            L=susie_L)
   
   #combine the pips in the summary stats dataframe
   final_summ_stats<-left_join(effect,gwas_res) %>%
@@ -430,7 +558,8 @@ simulate_hla<-function(n_min_alleles=10,
   posteriors_fit<-c()
   posteriors_ci<-c()
   for(g in genes_to_keep$gene){
-    if(sd(final_summ_stats %>% filter(gene==g) %>% pull(pip_pheno1)) == 0 | sd(final_summ_stats %>% filter(gene==g) %>% pull(pip_pheno2)) == 0){
+    if(length(which(final_summ_stats %>% filter(gene==g) %>% pull(pip_pheno1) > negative_threshold)) == 0 |
+       length(which(final_summ_stats %>% filter(gene==g) %>% pull(pip_pheno2) > negative_threshold)) == 0){
       bayes_corr_df<-data.frame(gene=g, bayes_pd=NA, direction_of_correlation=NA) %>% bind_rows(bayes_corr_df,.)
     } else {
       bayes_lm<-stan_glm(pip_pheno2~pip_pheno1, data=final_summ_stats %>% filter(gene==g),family = gaussian(link = "identity"))
@@ -476,13 +605,15 @@ simulate_hla<-function(n_min_alleles=10,
     mutate(bayesian_prob=ifelse(is.na(susie_coloc_prob) | is.na(bayes_pd),
                                 NA,
                                 susie_coloc_prob*bayes_pd)) %>%
-    arrange(desc(bayesian_prob),desc(susie_coloc_prob),correlation_p,desc(var_pheno1),desc(var_pheno2))
+    arrange(desc(bayesian_prob),desc(susie_coloc_prob),correlation_p,desc(var_pheno1),desc(var_pheno2)) %>%
+    left_join(.,min_p_pheno1) %>%
+    left_join(.,min_p_pheno2)
   
   #plot pips if want to
   if(plot_susie==TRUE){
     
     reg_coloc<-final_summ_stats %>% 
-      filter(gene %in% genes) %>%
+      filter(gene %in% genes$gene) %>%
       ggplot(aes(x=beta1,y=beta2))+
       geom_point()+
       geom_smooth(method="lm",formula=y~x-1)+
@@ -492,7 +623,7 @@ simulate_hla<-function(n_min_alleles=10,
       ylab("Pheno2 Betas")
     
     annotate_df<-c()
-    for(g in genes){
+    for(g in unique(final_summ_stats$gene)){
       
       annotate_df<-data.frame(gene=g,
                               x=0.25,
@@ -505,10 +636,10 @@ simulate_hla<-function(n_min_alleles=10,
     }
     
     pip_coloc<-final_summ_stats %>%
-      filter(gene %in% genes) %>%
+      filter(gene %in% genes$gene) %>%
       ggplot(aes(x=pip_pheno1,y=pip_pheno2))+
-      geom_abline(data=posteriors_ci %>% filter(gene %in% genes), aes(intercept=alpha, slope=beta),color = "skyblue", linewidth = 0.2, alpha = 0.25)+
-      geom_abline(data=posteriors_fit %>% filter(gene %in% genes), aes(intercept=alpha, slope=beta),color = "black", linewidth = 1)+
+      geom_abline(data=posteriors_ci %>% filter(gene %in% genes$gene), aes(intercept=alpha, slope=beta),color = "skyblue", linewidth = 0.2, alpha = 0.25)+
+      geom_abline(data=posteriors_fit %>% filter(gene %in% genes$gene), aes(intercept=alpha, slope=beta),color = "black", linewidth = 1)+
       geom_point()+
       geom_text(data=annotate_df,aes(x=x,y=y,label=text),inherit.aes = FALSE)+
       facet_wrap(~gene,ncol=1)+
@@ -544,7 +675,10 @@ for(i in 1:50){
                           genes=genes,
                           all_causal_alleles=opt$all_causal_alleles,
                           all_causal_genes=opt$all_causal_genes,
-                          plot_susie=opt$plot_susie)
+                          plot_susie=opt$plot_susie,
+                          continuous_trait=opt$continuous_trait,
+                          n_clone=opt$n_clone,
+                          susie_L=opt$susie_L)
   
   munged_sim<-sim_entry$summary_res %>%
     mutate(iteration=paste0(opt$iteration,".",i)) %>%
