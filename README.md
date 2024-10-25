@@ -1,2 +1,2 @@
-# meta_colocalization
+# hlacoloc
 Colocalization for the HLA region
