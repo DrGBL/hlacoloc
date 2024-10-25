@@ -1,0 +1,72 @@
+---
+title: "vignette"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{vignette}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(hlacoloc)
+```
+
+## Introduction
+
+HLA-coloc performs colocalization in two steps, as described in the manuscript. These are:
+
+1. HLA gene causal signature: this uses SuSiE to assign a posterior inclusion probability (PIP) to each HLA allele.
+
+2. HLA PIP Bayesian regression: this uses stanR to perform Bayesian regression of the PIPs in each genes separately.
+
+## Required inputs
+
+The following dataframes are necessary to run it (for each of the two phenotypes):
+
+1. The HLA association summary statistics. This is a dataframe with four columns:
+  - `Name`: the name of the allele. These must be given in IMGT-HLA format, but can be of any field resolution though (as long as it's the same for both phenotypes).
+  - `beta`: the beta of the associations.
+  - `se`: the standard errors.
+  - `N`: the sample sizes.
+
+2. The LD matrix (can be either in dataframe or matrix format). This is a square matrix of R coefficient for the HLA alleles above. Importantly, the order of the alleles needs to be the same in the summary statistics dataframe and in the LD matrix here.
+
+## Example
+
+First, load the data:
+```{r}
+data("ebna","ms","r_ebna","r_ms")
+```
+
+Here's a snippet of the EBNA data:
+```{r}
+head(ebna)
+r_ebna[1:5,1:5]
+```
+
+And here's a snippet of the MS data:
+```{r}
+head(ms)
+r_ms[1:5,1:5]
+```
+
+Now we run coloc:
+```{r, results = "hide"}
+coloc_res<-hla_coloc(pheno1=ebna,
+                    pheno1R=r_ebna,
+                    pheno2=ms,
+                    pheno2R=r_ms)
+```
+
+Results:
+```{r, fig.width = 8.5, fig.height = 11}
+coloc_res[["hla_colocalization"]]
+coloc_res[["plot"]]
+```
