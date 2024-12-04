@@ -2,8 +2,9 @@
 #'
 #' @param pheno1 Dataframe of HLA allele associations for phenotype 1. Needs to contain the following four columns:
 #' * `Name`: the name of the HLA allele in the IMGT-HLA format.
-#' * `beta`: the beta (effect sizes) of the HLA allele association.
-#' * `se`: the standard error.
+#' * `z`: the z-score of the HLA allele association.
+#' * `beta`: the beta (effect sizes) of the HLA allele association (required if z-score not provided).
+#' * `se`: the standard error (required if z-score not provided).
 #' * `N`: the sample size.
 #' @param pheno1R A dataframe or matrix of correlation coefficient (R) or the alleles in pheno1. The rows and columns need to be in the same order as the alleles in pheno1.
 #' @param is_cohort_ld_pheno1 Whether the LD matrix for the pheno1 cohort is from the same cohort (TRUE) or from an external reference (FALSE).
@@ -11,7 +12,8 @@
 #' @param pheno2R A dataframe or matrix of correlation coefficient (R) or the alleles in pheno2. The rows and columns need to be in the same order as the alleles in pheno2.
 #' @param is_cohort_ld_pheno2 Whether the LD matrix for the pheno2 cohort is from the same cohort (TRUE) or from an external reference (FALSE).
 #' @param max_iter_susieR Maximum number of iterations for susieR (default=100).
-#' @param plot_susie Whether to plot the results (TRUE/FALSE).
+#' @param plot_susie Whether to plot the results (TRUE/FALSE). This is automatically set to FALSE if the beta of the HLA allele association tests are not available.
+#' @param plot_assoc Whether to plot the HLA allele association results. This is automatically set to FALSE if the beta of the HLA allele association tests are not available, or if plot_susie is set to false.
 #' @param negative_threshold Minimum susieR posterior inclusion probability needed for both phenotypoes in order to check for colocalization using stanR (default=0.001).
 #' @param susie_L Maximum number of alleles with non-zero effect in the susieR model (default=10).
 #' @param n_min_alleles Minimum number of alleles required at a gene in order to attempt HLA colocalization at that gene. Genes with less than this threshold will be excluded from the analyses (default=10).
@@ -24,15 +26,16 @@
 #' @export
 hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
                     pheno2,pheno2R,is_cohort_ld_pheno2=FALSE,
-                    max_iter_susieR=100,plot_susie=TRUE,
+                    max_iter_susieR=100,plot_susie=TRUE,plot_assoc=TRUE,
                     negative_threshold=0.001,
                     susie_L=10,n_min_alleles=10){
 
   if( length(which(!pheno1$Name %in% pheno2$Name)) > 0 |
       length(which(!pheno2$Name %in% pheno1$Name)) > 0){
     print("Not same alleles in both cohorts.")
+  } else if(all(pheno1$Name==pheno2$Name)==FALSE) {
+    print("Alleles not in same order in both cohorts.")
   } else {
-    #susie pheno1
     if("z" %in% colnames(pheno1)){
       susie_pheno1<-susieR::susie_rss(R=as.matrix(pheno1R),
                                       z=pheno1$z,
@@ -68,22 +71,36 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
                                       L=susie_L)
     }
 
-    full_final<-dplyr::inner_join(pheno1 %>%
-                             dplyr::rename(beta1=.data$beta,
-                                    se1=.data$se,
-                                    N1=.data$N),
-                           pheno2 %>%
-                             dplyr::rename(beta2=.data$beta,
-                                    se2=.data$se,
-                                    N2=.data$N)) %>%
-      dplyr::mutate(pip_pheno1=susie_pheno1$pip) %>%
-      dplyr::mutate(pip_pheno2=susie_pheno2$pip) %>%
-      dplyr::mutate(coloc=.data$pip_pheno1*.data$pip_pheno2) %>%
-      dplyr::mutate(gene=stringr::str_extract(.data$Name,"[A-Z0-9-]*\\*")) %>%
-      dplyr::mutate(gene=stringr::str_replace(.data$gene,"\\*","")) %>%
-      dplyr::group_by(.data$gene) %>%
-      dplyr::filter(dplyr::n()>=n_min_alleles) %>%
-      dplyr::ungroup()
+    if("beta" %in% colnames(pheno1) & "beta" %in% colnames(pheno2)){
+      full_final<-dplyr::inner_join(pheno1 %>%
+                                      dplyr::rename(beta1=.data$beta,
+                                                    se1=.data$se,
+                                                    N1=.data$N),
+                                    pheno2 %>%
+                                      dplyr::rename(beta2=.data$beta,
+                                                    se2=.data$se,
+                                                    N2=.data$N)) %>%
+        dplyr::mutate(pip_pheno1=susie_pheno1$pip) %>%
+        dplyr::mutate(pip_pheno2=susie_pheno2$pip) %>%
+        dplyr::mutate(coloc=.data$pip_pheno1*.data$pip_pheno2) %>%
+        dplyr::mutate(gene=stringr::str_extract(.data$Name,"[A-Z0-9-]*\\*")) %>%
+        dplyr::mutate(gene=stringr::str_replace(.data$gene,"\\*","")) %>%
+        dplyr::group_by(.data$gene) %>%
+        dplyr::filter(dplyr::n()>=n_min_alleles) %>%
+        dplyr::ungroup()
+    } else {
+      full_final<-data.frame(Name=pheno1$Name) %>%
+        dplyr::mutate(pip_pheno1=susie_pheno1$pip) %>%
+        dplyr::mutate(pip_pheno2=susie_pheno2$pip) %>%
+        dplyr::mutate(coloc=.data$pip_pheno1*.data$pip_pheno2) %>%
+        dplyr::mutate(gene=stringr::str_extract(.data$Name,"[A-Z0-9-]*\\*")) %>%
+        dplyr::mutate(gene=stringr::str_replace(.data$gene,"\\*","")) %>%
+        dplyr::group_by(.data$gene) %>%
+        dplyr::filter(dplyr::n()>=n_min_alleles) %>%
+        dplyr::ungroup()
+    }
+
+
 
     full_final_summary<-full_final %>%
       dplyr::group_by(.data$gene) %>%
@@ -141,14 +158,16 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
 
 
     if(plot_susie==TRUE){
-      reg_coloc<-full_final %>%
-        ggplot2::ggplot(ggplot2::aes(x=.data$beta1,y=.data$beta2))+
-        ggplot2::geom_point()+
-        ggplot2::geom_smooth(method="lm",formula=y~x-1)+
-        ggplot2::facet_wrap(~gene, scales="free",ncol=1)+
-        ggplot2::theme_bw()+
-        ggplot2::ylab("Pheno1 Betas")+
-        ggplot2::xlab("Pheno2 Betas")
+      if(plot_assoc==TRUE & "beta" %in% colnames(pheno1) & "beta" %in% colnames(pheno2)){
+        reg_coloc<-full_final %>%
+          ggplot2::ggplot(ggplot2::aes(x=.data$beta1,y=.data$beta2))+
+          ggplot2::geom_point()+
+          ggplot2::geom_smooth(method="lm",formula=y~x-1)+
+          ggplot2::facet_wrap(~gene, scales="free",ncol=1)+
+          ggplot2::theme_bw()+
+          ggplot2::ylab("Pheno1 Betas")+
+          ggplot2::xlab("Pheno2 Betas")
+      }
 
       annotate_df<-c()
       for(g in full_final %>% dplyr::pull(.data$gene) %>% unique()){
@@ -176,9 +195,11 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
         ggplot2::xlab("Pheno1 PIPs")+
         ggplot2::ylab("Pheno2 PIPs")
 
-      plot_susie_pip<-ggpubr::ggarrange(reg_coloc,pip_coloc,ncol=2,labels=c("a","b"))
-
-
+      if(plot_assoc==TRUE & "beta" %in% colnames(pheno1) & "beta" %in% colnames(pheno2)){
+        plot_susie_pip<-ggpubr::ggarrange(reg_coloc,pip_coloc,ncol=2,labels=c("a","b"))
+      } else {
+        plot_susie_pip<-pip_coloc
+      }
 
     } else {
       plot_susie_pip<-NA
