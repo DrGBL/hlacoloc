@@ -33,22 +33,40 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
     print("Not same alleles in both cohorts.")
   } else {
     #susie pheno1
-    susie_pheno1<-susieR::susie_rss(R=as.matrix(pheno1R),
-                                    bhat=pheno1$beta,
-                                    shat=pheno1$se,
-                                    n=max(pheno1$N),
-                                    estimate_residual_variance=is_cohort_ld_pheno1,
-                                    max_iter=max_iter_susieR,
-                                    L=susie_L)
+    if("z" %in% colnames(pheno1)){
+      susie_pheno1<-susieR::susie_rss(R=as.matrix(pheno1R),
+                                      z=pheno1$z,
+                                      n=max(pheno1$N),
+                                      estimate_residual_variance=is_cohort_ld_pheno1,
+                                      max_iter=max_iter_susieR,
+                                      L=susie_L)
+    } else {
+      susie_pheno1<-susieR::susie_rss(R=as.matrix(pheno1R),
+                                      bhat=pheno1$beta,
+                                      shat=pheno1$se,
+                                      n=max(pheno1$N),
+                                      estimate_residual_variance=is_cohort_ld_pheno1,
+                                      max_iter=max_iter_susieR,
+                                      L=susie_L)
+    }
 
     #susie pheno2
-    susie_pheno2<-susieR::susie_rss(R=as.matrix(pheno2R),
-                                    bhat=pheno2$beta,
-                                    shat=pheno2$se,
-                                    n=max(pheno2$N),
-                                    estimate_residual_variance=is_cohort_ld_pheno2,
-                                    max_iter=max_iter_susieR,
-                                    L=susie_L)
+    if("z" %in% colnames(pheno2)){
+      susie_pheno2<-susieR::susie_rss(R=as.matrix(pheno2R),
+                                      z=pheno2$z,
+                                      n=max(pheno2$N),
+                                      estimate_residual_variance=is_cohort_ld_pheno2,
+                                      max_iter=max_iter_susieR,
+                                      L=susie_L)
+    } else {
+      susie_pheno2<-susieR::susie_rss(R=as.matrix(pheno2R),
+                                      bhat=pheno2$beta,
+                                      shat=pheno2$se,
+                                      n=max(pheno2$N),
+                                      estimate_residual_variance=is_cohort_ld_pheno2,
+                                      max_iter=max_iter_susieR,
+                                      L=susie_L)
+    }
 
     full_final<-dplyr::inner_join(pheno1 %>%
                              dplyr::rename(beta1=.data$beta,
