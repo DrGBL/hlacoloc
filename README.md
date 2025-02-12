@@ -33,13 +33,13 @@ The following dataframes are necessary to run it (for each of the two phenotypes
 
 ## Example
 
-First, load the library and the included example data (taken from the paper above):
+### First, load the library and the included example data (taken from the paper above):
 ```{r}
 library(hlacoloc)
 data("ebna","ms","r_ebna","r_ms")
 ```
 
-Here's a snippet of the EBNA data:
+### Here's a snippet of the EBNA data:
 ```{r}
 head(ebna)
 #>         Name         beta       se    N
@@ -58,7 +58,7 @@ r_ebna[1:5,1:5]
 #> G*01:05N    -0.092508 -0.0171784 -0.0672568 -0.0257557  1.0000000
 ```
 
-And here's a snippet of the MS data:
+### And here's a snippet of the multiple sclerosis (MS) data:
 ```{r}
 head(ms)
 #>         Name      beta       se      N
@@ -77,7 +77,7 @@ r_ms[1:5,1:5]
 #> G*01:05N   -0.0982033 -0.00766048 -0.0569037 -0.0264493  1.00000000
 ```
 
-Now we run HLA-coloc:
+### Now we run HLA-coloc on EBNA and MS:
 ```{r, results = "hide"}
 coloc_res<-hla_coloc(pheno1=ebna,
                     pheno1R=r_ebna,
@@ -85,7 +85,8 @@ coloc_res<-hla_coloc(pheno1=ebna,
                     pheno2R=r_ms)
 ```
 
-Results:
+### Results:
+
 ```{r, fig.width = 8.5, fig.height = 11}
 coloc_res[["hla_colocalization"]]
 #> # A tibble: 9 × 5
