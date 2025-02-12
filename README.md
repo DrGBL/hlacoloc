@@ -33,8 +33,9 @@ The following dataframes are necessary to run it (for each of the two phenotypes
 
 ## Example
 
-First, load the data:
+First, load the library and the included example data (taken from the paper above):
 ```{r}
+library(hlacoloc)
 data("ebna","ms","r_ebna","r_ms")
 ```
 
