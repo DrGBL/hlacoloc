@@ -128,6 +128,7 @@ coloc_res[["plot"]]
  - `beta`: the beta (effect sizes) of the HLA allele association (required if z-score not provided).
  - `se`: the standard error (required if z-score not provided).
  - `N`: the sample size.
+
 `pheno1R`: A dataframe or matrix of correlation coefficient (R) or the alleles in pheno1. The rows and columns need to be in the same order as the alleles in pheno1.
 `is_cohort_ld_pheno1`: Whether the LD matrix for the pheno1 cohort is from the same cohort (TRUE) or from an external reference (FALSE).
 `pheno2`: Dataframe of HLA allele associations for phenotype 2. Needs to be in the same format as pheno1, including rows in same order.
