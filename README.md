@@ -122,7 +122,9 @@ coloc_res[["hla_colocalization"]]
 coloc_res[["plot"]]
 ```
 The plot has two columns.
+
 Left (a): the betas of the HLA allele summary statistics for the two traits.
+
 Right (b): the PIPs obtained from SuSiE, and the final probabilities of HLA colocalization.
 
 ![image](https://github.com/user-attachments/assets/ef19c6fe-3501-4f4c-a574-e15595f47930)
