@@ -98,7 +98,7 @@ The colocalization table includes 5 columns
   - `susie_coloc_prob`: the probability that SuSiE selects at least one shared HLA allele between the two traits at the given gene.
   - `bayes_pd`: the probability that the SuSiE posterior inclusion probabilities (PIP) correlate for each genes.
   - `direction_of_correlation`: a check to make sure that the correlation between the PIPs is positive.
-  - `hla_colocalization_probability`: the HLA colocalization probability (only valid if `direction_of_correlation` is correct).
+  - `hla_colocalization_probability`: the HLA colocalization probability (only valid if `direction_of_correlation` is correct). This is the product of `susie_coloc_prob` and `bayes_pd`, and is the final probability of HLA colocalization.
 
 ```{r, fig.width = 8.5, fig.height = 11}
 coloc_res[["hla_colocalization"]]
@@ -116,8 +116,14 @@ coloc_res[["hla_colocalization"]]
 #> 9 G           0.00000352    0.554 Correct                             0.00000195
 #> # ℹ abbreviated names: ¹direction_of_correlation,
 #> #   ²hla_colocalization_probability
+```
+
+```{r, fig.width = 8.5, fig.height = 11}
 coloc_res[["plot"]]
 ```
+The plot has two columns.
+Left (a): the betas of the HLA allele summary statistics for the two traits.
+Right (b): the PIPs obtained from SuSiE, and the final probabilities of HLA colocalization.
 ![image](https://github.com/user-attachments/assets/ef19c6fe-3501-4f4c-a574-e15595f47930)
 
 ## Full list of inputs.
