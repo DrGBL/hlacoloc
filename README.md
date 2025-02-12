@@ -102,6 +102,5 @@ coloc_res[["hla_colocalization"]]
 #> # ℹ abbreviated names: ¹direction_of_correlation,
 #> #   ²hla_colocalization_probability
 coloc_res[["plot"]]
-![image](https://github.com/user-attachments/assets/ef19c6fe-3501-4f4c-a574-e15595f47930)
 ```
-
+![image](https://github.com/user-attachments/assets/ef19c6fe-3501-4f4c-a574-e15595f47930)
