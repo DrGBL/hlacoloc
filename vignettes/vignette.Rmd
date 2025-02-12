@@ -1,12 +1,9 @@
 ---
 title: "vignette"
-#output: rmarkdown::html_vignette
 output:
   pdf_document: default
-vignette: >
-  %\VignetteIndexEntry{vignette}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+  word_document: default
+vignette: "%\\VignetteIndexEntry{vignette} %\\VignetteEngine{knitr::rmarkdown} %\\VignetteEncoding{UTF-8}\n"
 ---
 
 ```{r, include = FALSE}
@@ -32,34 +29,39 @@ HLA-coloc performs colocalization in two steps, as described in the manuscript. 
 
 The following dataframes are necessary to run it (for each of the two phenotypes):
 
-1. The HLA association summary statistics. This is a dataframe with four columns:
+1. The HLA association summary statistics. This is a dataframe with the following columns:
   - `Name`: the name of the allele. These must be given in IMGT-HLA format, but can be of any field resolution though (as long as it's the same for both phenotypes).
-  - `beta`: the beta of the associations.
-  - `se`: the standard errors.
+  - `z`: the z-scores of the associations.
+  - `beta`: the beta of the associations (if `z` is not provided).
+  - `se`: the standard errors (if `z` is not provided).
   - `N`: the sample sizes.
 
 2. The LD matrix (can be either in dataframe or matrix format). This is a square matrix of R coefficient for the HLA alleles above. Importantly, the order of the alleles needs to be the same in the summary statistics dataframe and in the LD matrix here.
 
 ## Example
 
-First, load the data:
+### First, load the data:
+The data is included in the package.
 ```{r}
 data("ebna","ms","r_ebna","r_ms")
 ```
 
+
+### Data snippet
 Here's a snippet of the EBNA data:
 ```{r}
 head(ebna)
 r_ebna[1:5,1:5]
 ```
 
-And here's a snippet of the MS data:
+And here's a snippet of the multiple sclerosis (MS) data:
 ```{r}
 head(ms)
 r_ms[1:5,1:5]
 ```
 
-Now we run coloc:
+### Now we run HLA-coloc on EBNA and MS:
+This performs the 2 steps described above in one command.
 ```{r, results = "hide"}
 coloc_res<-hla_coloc(pheno1=ebna,
                     pheno1R=r_ebna,
@@ -67,8 +69,26 @@ coloc_res<-hla_coloc(pheno1=ebna,
                     pheno2R=r_ms)
 ```
 
-Results:
+### Results:
+Results include the colocalization table and a plot (optional).
+
+The colocalization table includes 5 columns
+  - `gene`: the HLA gene.
+  - `susie_coloc_prob`: the probability that SuSiE selects at least one shared HLA allele between the two traits at the given gene.
+  - `bayes_pd`: the probability that the SuSiE posterior inclusion probabilities (PIP) correlate for each genes.
+  - `direction_of_correlation`: a check to make sure that the correlation between the PIPs is positive.
+  - `hla_colocalization_probability`: the HLA colocalization probability (only valid if `direction_of_correlation` is correct). This is the product of `susie_coloc_prob` and `bayes_pd`, and is the final probability of HLA colocalization.
+
 ```{r, fig.width = 8.5, fig.height = 11}
 coloc_res[["hla_colocalization"]]
+```
+
+The plot has two columns.
+Left (a): the betas of the HLA allele summary statistics for the two traits.
+Right (b): the PIPs obtained from SuSiE, and the final probabilities of HLA colocalization.
+
+![image](https://github.com/user-attachments/assets/ef19c6fe-3501-4f4c-a574-e15595f47930)
+
+```{r, fig.width = 8.5, fig.height = 11}
 coloc_res[["plot"]]
 ```
