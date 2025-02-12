@@ -130,13 +130,23 @@ coloc_res[["plot"]]
  - `N`: the sample size.
 
 `pheno1R`: A dataframe or matrix of correlation coefficient (R) or the alleles in pheno1. The rows and columns need to be in the same order as the alleles in pheno1.
+
 `is_cohort_ld_pheno1`: Whether the LD matrix for the pheno1 cohort is from the same cohort (TRUE) or from an external reference (FALSE).
+
 `pheno2`: Dataframe of HLA allele associations for phenotype 2. Needs to be in the same format as pheno1, including rows in same order.
+
 `pheno2R`: A dataframe or matrix of correlation coefficient (R) or the alleles in pheno2. The rows and columns need to be in the same order as the alleles in pheno2.
+
 `is_cohort_ld_pheno2`: Whether the LD matrix for the pheno2 cohort is from the same cohort (TRUE) or from an external reference (FALSE).
+
 `max_iter_susieR`: Maximum number of iterations for susieR (default=100).
+
 `plot_susie`: Whether to plot the results (TRUE/FALSE). This is automatically set to FALSE if the beta of the HLA allele association tests are not available.
+
 `plot_assoc`: Whether to plot the HLA allele association results. This is automatically set to FALSE if the beta of the HLA allele association tests are not available, or if plot_susie is set to false.
+
 `negative_threshold`: Minimum susieR posterior inclusion probability needed for both phenotypoes in order to check for colocalization using stanR (default=0.001).
+
 `susie_L`: Maximum number of alleles with non-zero effect in the susieR model (default=10).
+
 `n_min_alleles`: Minimum number of alleles required at a gene in order to attempt HLA colocalization at that gene. Genes with less than this threshold will be excluded from the analyses (default=10).
