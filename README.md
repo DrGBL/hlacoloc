@@ -97,7 +97,7 @@ The colocalization table includes 5 columns
   - `gene`: the HLA gene.
   - `susie_coloc_prob`: the probability that SuSiE selects at least one shared HLA allele between the two traits at the given gene.
   - `bayes_pd`: the probability that the SuSiE posterior inclusion probabilities (PIP) correlate for each genes.
-  - `direction_of_correlation`: a check to make sure that the correlation between 
+  - `direction_of_correlation`: a check to make sure that the correlation between the PIPs is positive.
   - `hla_colocalization_probability`: the HLA colocalization probability (only valid if `direction_of_correlation` is correct).
 
 ```{r, fig.width = 8.5, fig.height = 11}
