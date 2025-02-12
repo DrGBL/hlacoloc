@@ -165,8 +165,8 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
           ggplot2::geom_smooth(method="lm",formula=y~x-1)+
           ggplot2::facet_wrap(~gene, scales="free",ncol=1)+
           ggplot2::theme_bw()+
-          ggplot2::ylab("Pheno1 Betas")+
-          ggplot2::xlab("Pheno2 Betas")
+          ggplot2::xlab("Pheno1 Betas")+
+          ggplot2::ylab("Pheno2 Betas")
       }
 
       annotate_df<-c()
