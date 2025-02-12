@@ -31,15 +31,19 @@ The following dataframes are necessary to run it (for each of the two phenotypes
 
 2. The LD matrix (can be either in dataframe or matrix format). This is a square matrix of R coefficient for the HLA alleles above. Importantly, the order of the alleles needs to be the same in the summary statistics dataframe and in the LD matrix here.
 
+See other options at the end.
+
 ## Example
 
-### First, load the library and the included example data (taken from the paper above):
+### First, load the library and the data
+The data is included in the package.
 ```{r}
 library(hlacoloc)
 data("ebna","ms","r_ebna","r_ms")
 ```
 
-### Here's a snippet of the EBNA data:
+### Data snippet
+Here's a snippet of the EBNA data:
 ```{r}
 head(ebna)
 #>         Name         beta       se    N
@@ -58,7 +62,7 @@ r_ebna[1:5,1:5]
 #> G*01:05N    -0.092508 -0.0171784 -0.0672568 -0.0257557  1.0000000
 ```
 
-### And here's a snippet of the multiple sclerosis (MS) data:
+And here's a snippet of the multiple sclerosis (MS) data:
 ```{r}
 head(ms)
 #>         Name      beta       se      N
@@ -78,6 +82,7 @@ r_ms[1:5,1:5]
 ```
 
 ### Now we run HLA-coloc on EBNA and MS:
+This performs the 2 steps described above in one command.
 ```{r, results = "hide"}
 coloc_res<-hla_coloc(pheno1=ebna,
                     pheno1R=r_ebna,
@@ -86,6 +91,14 @@ coloc_res<-hla_coloc(pheno1=ebna,
 ```
 
 ### Results:
+Results include the colocalization table and a plot (optional).
+
+The colocalization table includes 5 columns
+  - `gene`: the HLA gene.
+  - `susie_coloc_prob`: the probability that SuSiE selects at least one shared HLA allele between the two traits at the given gene.
+  - `bayes_pd`: the probability that the SuSiE posterior inclusion probabilities (PIP) correlate for each genes.
+  - `direction_of_correlation`: a check to make sure that the correlation between 
+  - `hla_colocalization_probability`: the HLA colocalization probability (only valid if `direction_of_correlation` is correct).
 
 ```{r, fig.width = 8.5, fig.height = 11}
 coloc_res[["hla_colocalization"]]
@@ -106,3 +119,23 @@ coloc_res[["hla_colocalization"]]
 coloc_res[["plot"]]
 ```
 ![image](https://github.com/user-attachments/assets/ef19c6fe-3501-4f4c-a574-e15595f47930)
+
+## Full list of inputs.
+
+#' @param pheno1 Dataframe of HLA allele associations for phenotype 1. Needs to contain the following columns:
+#' * `Name`: the name of the HLA allele in the IMGT-HLA format.
+#' * `z`: the z-score of the HLA allele association.
+#' * `beta`: the beta (effect sizes) of the HLA allele association (required if z-score not provided).
+#' * `se`: the standard error (required if z-score not provided).
+#' * `N`: the sample size.
+#' @param pheno1R A dataframe or matrix of correlation coefficient (R) or the alleles in pheno1. The rows and columns need to be in the same order as the alleles in pheno1.
+#' @param is_cohort_ld_pheno1 Whether the LD matrix for the pheno1 cohort is from the same cohort (TRUE) or from an external reference (FALSE).
+#' @param pheno2 Dataframe of HLA allele associations for phenotype 2. Needs to be in the same format as pheno1, including rows in same order.
+#' @param pheno2R A dataframe or matrix of correlation coefficient (R) or the alleles in pheno2. The rows and columns need to be in the same order as the alleles in pheno2.
+#' @param is_cohort_ld_pheno2 Whether the LD matrix for the pheno2 cohort is from the same cohort (TRUE) or from an external reference (FALSE).
+#' @param max_iter_susieR Maximum number of iterations for susieR (default=100).
+#' @param plot_susie Whether to plot the results (TRUE/FALSE). This is automatically set to FALSE if the beta of the HLA allele association tests are not available.
+#' @param plot_assoc Whether to plot the HLA allele association results. This is automatically set to FALSE if the beta of the HLA allele association tests are not available, or if plot_susie is set to false.
+#' @param negative_threshold Minimum susieR posterior inclusion probability needed for both phenotypoes in order to check for colocalization using stanR (default=0.001).
+#' @param susie_L Maximum number of alleles with non-zero effect in the susieR model (default=10).
+#' @param n_min_alleles Minimum number of alleles required at a gene in order to attempt HLA colocalization at that gene. Genes with less than this threshold will be excluded from the analyses (default=10).
