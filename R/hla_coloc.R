@@ -1,6 +1,6 @@
 #' Perform HLA colocalization
 #'
-#' @param pheno1 Dataframe of HLA allele associations for phenotype 1. Needs to contain the following four columns:
+#' @param pheno1 Dataframe of HLA allele associations for phenotype 1. Needs to contain the following columns:
 #' * `Name`: the name of the HLA allele in the IMGT-HLA format.
 #' * `z`: the z-score of the HLA allele association.
 #' * `beta`: the beta (effect sizes) of the HLA allele association (required if z-score not provided).
