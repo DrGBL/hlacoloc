@@ -333,6 +333,22 @@ simulate_hla<-function(n_min_alleles=10,
     mutate(causal_effect_pheno2=causal_effect_pheno2_tmp-weighted_mean_effect2) %>%
     ungroup()
   
+  #check that the effects aren't correlated by chance only
+  mod_df<-data.frame(gene=genes_to_keep$gene,
+                     pval_pheno_effects=rep(NA,nrow(genes_to_keep)),
+                     z_pheno_effects=rep(NA,nrow(genes_to_keep)))
+  for(i in 1:nrow(mod_df)){
+    tmp<-effect %>% filter(gene==genes_to_keep$gene[i])
+    mod<-lm(causal_effect_pheno1~causal_effect_pheno2,data=tmp)
+    if(nrow(summary(mod)$coefficients)==1){
+      mod_df$pval_pheno_effects[i]<-NA
+      mod_df$z_pheno_effects[i]<-NA
+    } else {
+      mod_df$pval_pheno_effects[i]<-summary(mod)$coefficients[2,4]
+      mod_df$z_pheno_effects[i]<-summary(mod)$coefficients[2,1]/summary(mod)$coefficients[2,2]
+    }
+  }
+  
   #now simulate individual level phenotypes
   pheno_sims<-data.frame(ID=haplotypes$ID,
                          pheno1=NA,
@@ -415,7 +431,7 @@ simulate_hla<-function(n_min_alleles=10,
       mutate(gene=str_extract(allele,"^[A-Z0-9]*")) %>%
       mutate(weight=1/(se1^2+se2^2)) %>%
       left_join(.,genes)
-
+    
     min_p_pheno1<-gwas_res %>%
       arrange(pval1) %>%
       group_by(gene) %>%
@@ -423,7 +439,7 @@ simulate_hla<-function(n_min_alleles=10,
       ungroup() %>%
       rename(min_pval_pheno1=pval1) %>%
       dplyr::select(c(gene,min_pval_pheno1))
-  
+    
     min_p_pheno2<-gwas_res %>%
       arrange(pval1) %>%
       group_by(gene) %>%
@@ -481,7 +497,7 @@ simulate_hla<-function(n_min_alleles=10,
       mutate(gene=str_extract(allele,"^[A-Z0-9]*")) %>%
       mutate(weight=1/(se1^2+se2^2)) %>%
       left_join(.,genes)
-      
+    
     min_p_pheno1<-gwas_res %>%
       arrange(pval1) %>%
       group_by(gene) %>%
@@ -489,7 +505,7 @@ simulate_hla<-function(n_min_alleles=10,
       ungroup() %>%
       rename(min_pval_pheno1=pval1) %>%
       dplyr::select(c(gene,min_pval_pheno1))
-  
+    
     min_p_pheno2<-gwas_res %>%
       arrange(pval1) %>%
       group_by(gene) %>%
@@ -526,7 +542,7 @@ simulate_hla<-function(n_min_alleles=10,
       
     }
   }
-
+  
   
   #susie pheno1
   susie1<-susieR::susie_rss(R=ld_filtered,
@@ -607,7 +623,8 @@ simulate_hla<-function(n_min_alleles=10,
                                 susie_coloc_prob*bayes_pd)) %>%
     arrange(desc(bayesian_prob),desc(susie_coloc_prob),correlation_p,desc(var_pheno1),desc(var_pheno2)) %>%
     left_join(.,min_p_pheno1) %>%
-    left_join(.,min_p_pheno2)
+    left_join(.,min_p_pheno2) %>%
+    left_join(.,mod_df)
   
   #plot pips if want to
   if(plot_susie==TRUE){
