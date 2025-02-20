@@ -40,7 +40,9 @@ option_list = list(
   make_option(c("--n_clone"), type="numeric", default=1,
               help="Number of times to clone the cohort, helpful for case control studies simulations where power is limited", metavar="numeric"),
   make_option(c("--susie_L"), type="numeric", default=10,
-              help="Maximum number of non-zero effects in the susie regression model. Default = 10", metavar="numeric")
+              help="Maximum number of non-zero effects in the susie regression model. Default = 10", metavar="numeric"),
+  make_option(c("--fix_alpha"), type="logical", default=TRUE,
+              help="Whether to fix the intercept of PIP regression in STAN to 0 (not recommended) or also estimate it (the default).", metavar="logical")
 );
 
 opt_parser = OptionParser(option_list=option_list);
@@ -152,9 +154,11 @@ genes<-genes %>%
 # all_causal_alleles=FALSE
 # plot_susie=FALSE
 # all_causal_genes=FALSE
-# continuous_trait=FALSE
-# negative_threshold=0.001
+# continuous_trait=TRUE
+# negative_threshold=0.1
 # n_clone=10
+# susie_L=10
+# fix_alpha=FALSE
 
 simulate_hla<-function(n_min_alleles=10,
                        pheno2_mean_shared_factor=0,
@@ -169,9 +173,10 @@ simulate_hla<-function(n_min_alleles=10,
                        all_causal_genes=FALSE,
                        plot_susie=FALSE,
                        continuous_trait=TRUE,
-                       negative_threshold=0.001,
+                       negative_threshold=0.1,
                        n_clone=1,
-                       susie_L=10){
+                       susie_L=10,
+                       fix_alpha=FALSE){
   
   #apply frequency and allele number thresholds to obtain list of genes to simulate
   genes_filtered<-genes %>%
@@ -278,32 +283,32 @@ simulate_hla<-function(n_min_alleles=10,
            drop_to_zero_pheno2=FALSE)
   if(all_causal_alleles==FALSE){
     for(g in genes_to_keep$gene){
-      n_causal_pheno1<-sample(0:ceiling((effect %>%
+      non_causal_pheno1<-sample(0:ceiling((effect %>%
                                            filter(gene==g) %>%
-                                           nrow())/2),
+                                           nrow())/5),
                               1)
-      row_causal_pheno1<-sample(1:ceiling((effect %>%
+      row_non_causal_pheno1<-sample(1:ceiling((effect %>%
                                              filter(gene==g) %>%
-                                             nrow())/2),
-                                n_causal_pheno1)
+                                             nrow())),
+                                non_causal_pheno1)
       effect<-effect %>%
         group_by(gene) %>%
-        mutate(drop_to_zero_pheno1=ifelse(gene==g & !(row_number() %in% row_causal_pheno1),
+        mutate(drop_to_zero_pheno1=ifelse(gene==g & (row_number() %in% row_non_causal_pheno1),
                                           TRUE,
                                           drop_to_zero_pheno1)) %>%
         ungroup()
       
-      n_causal_pheno2<-sample(0:ceiling((effect %>%
+      non_causal_pheno2<-sample(0:ceiling((effect %>%
                                            filter(gene==g) %>%
-                                           nrow())/2),
+                                           nrow())/5),
                               1)
-      row_causal_pheno2<-sample(1:(effect %>%
+      row_non_causal_pheno2<-sample(1:(effect %>%
                                      filter(gene==g) %>%
                                      nrow()),
-                                n_causal_pheno2)
+                                    non_causal_pheno2)
       effect<-effect %>%
         group_by(gene) %>%
-        mutate(drop_to_zero_pheno2=ifelse(gene==g & !(row_number() %in% row_causal_pheno2),
+        mutate(drop_to_zero_pheno2=ifelse(gene==g & (row_number() %in% row_non_causal_pheno2),
                                           TRUE,
                                           drop_to_zero_pheno2)) %>%
         ungroup()
@@ -441,7 +446,7 @@ simulate_hla<-function(n_min_alleles=10,
       dplyr::select(c(gene,min_pval_pheno1))
     
     min_p_pheno2<-gwas_res %>%
-      arrange(pval1) %>%
+      arrange(pval2) %>%
       group_by(gene) %>%
       filter(row_number()==1) %>%
       ungroup() %>%
@@ -545,6 +550,9 @@ simulate_hla<-function(n_min_alleles=10,
   
   
   #susie pheno1
+  if(is.na(susie_L)){
+    susie_L<-nrow(ld_filtered)
+  }
   susie1<-susieR::susie_rss(R=ld_filtered,
                             bhat=left_join(effect %>% dplyr::select(allele),gwas_res)$beta1,
                             shat=left_join(effect %>% dplyr::select(allele),gwas_res)$se1,
@@ -570,35 +578,82 @@ simulate_hla<-function(n_min_alleles=10,
   
   #get the bayesian correlation probability
   #specifically this is the probability that the correlation term is not zero.
-  bayes_corr_df<-c()
   posteriors_fit<-c()
   posteriors_ci<-c()
-  for(g in genes_to_keep$gene){
-    if(length(which(final_summ_stats %>% filter(gene==g) %>% pull(pip_pheno1) > negative_threshold)) == 0 |
-       length(which(final_summ_stats %>% filter(gene==g) %>% pull(pip_pheno2) > negative_threshold)) == 0){
-      bayes_corr_df<-data.frame(gene=g, bayes_pd=NA, direction_of_correlation=NA) %>% bind_rows(bayes_corr_df,.)
-    } else {
-      bayes_lm<-stan_glm(pip_pheno2~pip_pheno1, data=final_summ_stats %>% filter(gene==g),family = gaussian(link = "identity"))
-      
-      posteriors_ci<-as.data.frame(as.matrix(bayes_lm)) %>%
-        mutate(gene=g) %>%
-        rename(alpha=`(Intercept)`) %>%
-        rename(beta=pip_pheno1) %>%
-        head(n=100) %>%
-        bind_rows(posteriors_ci,.)
-      
-      posteriors_fit<-data.frame(alpha=bayes_lm$coefficients[1],
-                                 beta=bayes_lm$coefficients[2],
-                                 gene=g) %>%
-        bind_rows(posteriors_fit,.)
-      
-      bayes_corr_df<-data.frame(gene=g,
-                                bayes_pd=p_direction(bayes_lm)$pd[2],
-                                #nullInterval = c(0,1))$pd,
-                                direction_of_correlation=ifelse(bayes_lm$coefficients[2] >= 0,
-                                                                "Correct",
-                                                                "Incorrect")) %>%
-        bind_rows(bayes_corr_df,.)
+  if(fix_alpha==FALSE){
+    bayes_corr_df<-data.frame("gene"=NA, "bayes_pd"=NA, "direction_of_correlation"=NA, "bayes_pd2"=NA,               
+                              "odds_p_map"=NA, "mean_alpha"=NA, "median_alpha"=NA, "low95_alpha"=NA,            
+                              "high95_alpha"=NA, "posterior_prob_map"=NA)
+    
+    for(g in genes_to_keep$gene){
+      if(length(which(final_summ_stats %>% filter(gene==g) %>% pull(pip_pheno1) > negative_threshold)) == 0 |
+         length(which(final_summ_stats %>% filter(gene==g) %>% pull(pip_pheno2) > negative_threshold)) == 0){
+        bayes_corr_df<-data.frame(gene=g, bayes_pd=NA, direction_of_correlation=NA) %>% bind_rows(bayes_corr_df,.)
+      } else {
+        bayes_lm<-stan_glm(pip_pheno2~pip_pheno1, 
+                           data=final_summ_stats %>% filter(gene==g),
+                           family = gaussian(link = "identity"))
+        
+        posteriors_ci<-as.data.frame(as.matrix(bayes_lm)) %>%
+          mutate(gene=g) %>%
+          rename(alpha=`(Intercept)`) %>%
+          rename(beta=pip_pheno1) %>%
+          head(n=100) %>%
+          bind_rows(posteriors_ci,.)
+        
+        posteriors_fit<-data.frame(alpha=bayes_lm$coefficients[1],
+                                   beta=bayes_lm$coefficients[2],
+                                   gene=g) %>%
+          bind_rows(posteriors_fit,.)
+        
+        bayes_corr_df<-data.frame(gene=g,
+                                  bayes_pd=p_direction(bayes_lm)$pd[2],
+                                  odds_p_map=1/p_map(bayes_lm)$p_MAP[2],
+                                  mean_alpha=mean(posteriors_fit$alpha),
+                                  median_alpha=median(posteriors_fit$alpha),
+                                  low95_alpha=quantile(posteriors_fit$alpha,0.025),
+                                  high95_alpha=quantile(posteriors_fit$alpha,0.975),
+                                  #nullInterval = c(0,1))$pd,
+                                  direction_of_correlation=ifelse(bayes_lm$coefficients[2] >= 0,
+                                                                  "Correct",
+                                                                  "Incorrect")) %>%
+          mutate(posterior_prob_map=ifelse(p_map(bayes_lm)$p_MAP[2]==0,1,odds_p_map/(1+odds_p_map))) %>%
+          bind_rows(bayes_corr_df,.)
+      }
+    }
+  } else {
+    bayes_corr_df<-data.frame("gene"=NA, "bayes_pd"=NA, "direction_of_correlation"=NA, "bayes_pd2"=NA,               
+                              "odds_p_map"=NA, "posterior_prob_map"=NA)
+    
+    for(g in genes_to_keep$gene){
+      if(length(which(final_summ_stats %>% filter(gene==g) %>% pull(pip_pheno1) > negative_threshold)) == 0 |
+         length(which(final_summ_stats %>% filter(gene==g) %>% pull(pip_pheno2) > negative_threshold)) == 0){
+        bayes_corr_df<-data.frame(gene=g, bayes_pd=NA, direction_of_correlation=NA) %>% bind_rows(bayes_corr_df,.)
+      } else {
+        bayes_lm<-stan_glm(pip_pheno2~pip_pheno1-1, 
+                           data=final_summ_stats %>% filter(gene==g),
+                           family = gaussian(link = "identity"))
+        
+        posteriors_ci<-as.data.frame(as.matrix(bayes_lm)) %>%
+          mutate(gene=g) %>%
+          rename(beta=pip_pheno1) %>%
+          head(n=100) %>%
+          bind_rows(posteriors_ci,.)
+        
+        posteriors_fit<-data.frame(beta=bayes_lm$coefficients[1],
+                                   gene=g) %>%
+          bind_rows(posteriors_fit,.)
+        
+        bayes_corr_df<-data.frame(gene=g,
+                                  bayes_pd=p_direction(bayes_lm)$pd,
+                                  odds_p_map=1/p_map(bayes_lm)$p_MAP,
+                                  #nullInterval = c(0,1))$pd,
+                                  direction_of_correlation=ifelse(bayes_lm$coefficients[1] >= 0,
+                                                                  "Correct",
+                                                                  "Incorrect")) %>%
+          mutate(posterior_prob_map=ifelse(p_map(bayes_lm)$p_MAP==0,1,odds_p_map/(1+odds_p_map))) %>%
+          bind_rows(bayes_corr_df,.)
+      }
     }
   }
   
@@ -618,13 +673,15 @@ simulate_hla<-function(n_min_alleles=10,
     mutate(colocalizes_frequentist=ifelse(is.na(colocalizes_frequentist),
                                           FALSE,
                                           colocalizes_frequentist)) %>%
-    mutate(bayesian_prob=ifelse(is.na(susie_coloc_prob) | is.na(bayes_pd),
-                                NA,
-                                susie_coloc_prob*bayes_pd)) %>%
-    arrange(desc(bayesian_prob),desc(susie_coloc_prob),correlation_p,desc(var_pheno1),desc(var_pheno2)) %>%
+    mutate(bayesian_prob=ifelse(is.na(susie_coloc_prob) | is.na(posterior_prob_map),
+                                  NA,
+                                  susie_coloc_prob*posterior_prob_map)) %>%
+    arrange(desc(shared_genetics),desc(bayesian_prob),desc(susie_coloc_prob),correlation_p,desc(var_pheno1),desc(var_pheno2)) %>%
     left_join(.,min_p_pheno1) %>%
     left_join(.,min_p_pheno2) %>%
     left_join(.,mod_df)
+  
+  #effect %>% ggplot(aes(x=causal_effect_pheno1,y=causal_effect_pheno2)) +geom_point()+facet_wrap(~gene)
   
   #plot pips if want to
   if(plot_susie==TRUE){
@@ -652,24 +709,41 @@ simulate_hla<-function(n_min_alleles=10,
       
     }
     
-    pip_coloc<-final_summ_stats %>%
-      filter(gene %in% genes$gene) %>%
-      ggplot(aes(x=pip_pheno1,y=pip_pheno2))+
-      geom_abline(data=posteriors_ci %>% filter(gene %in% genes$gene), aes(intercept=alpha, slope=beta),color = "skyblue", linewidth = 0.2, alpha = 0.25)+
-      geom_abline(data=posteriors_fit %>% filter(gene %in% genes$gene), aes(intercept=alpha, slope=beta),color = "black", linewidth = 1)+
-      geom_point()+
-      geom_text(data=annotate_df,aes(x=x,y=y,label=text),inherit.aes = FALSE)+
-      facet_wrap(~gene,ncol=1)+
-      theme_bw()+
-      coord_cartesian(ylim = c(0, 1), xlim = c(0,1))+
-      xlab("Pheno1 PIPs")+
-      ylab("Pheno2 PIPs")
+    if(fix_alpha==FALSE){
+      pip_coloc<-final_summ_stats %>%
+        filter(gene %in% genes$gene) %>%
+        ggplot(aes(x=pip_pheno1,y=pip_pheno2))+
+        geom_abline(data=posteriors_ci %>% filter(gene %in% genes$gene), aes(intercept=alpha, slope=beta),color = "skyblue", linewidth = 0.2, alpha = 0.25)+
+        geom_abline(data=posteriors_fit %>% filter(gene %in% genes$gene), aes(intercept=alpha, slope=beta),color = "black", linewidth = 1)+
+        geom_point()+
+        geom_text(data=annotate_df,aes(x=x,y=y,label=text),inherit.aes = FALSE)+
+        facet_wrap(~gene,ncol=1)+
+        theme_bw()+
+        coord_cartesian(ylim = c(0, 1), xlim = c(0,1))+
+        xlab("Pheno1 PIPs")+
+        ylab("Pheno2 PIPs")
+    } else {
+      pip_coloc<-final_summ_stats %>%
+        filter(gene %in% genes$gene) %>%
+        ggplot(aes(x=pip_pheno1,y=pip_pheno2))+
+        geom_abline(data=posteriors_ci %>% filter(gene %in% genes$gene), aes(intercept=0, slope=beta),color = "skyblue", linewidth = 0.2, alpha = 0.25)+
+        geom_abline(data=posteriors_fit %>% filter(gene %in% genes$gene), aes(intercept=0, slope=beta),color = "black", linewidth = 1)+
+        geom_point()+
+        geom_text(data=annotate_df,aes(x=x,y=y,label=text),inherit.aes = FALSE)+
+        facet_wrap(~gene,ncol=1)+
+        theme_bw()+
+        coord_cartesian(ylim = c(0, 1), xlim = c(0,1))+
+        xlab("Pheno1 PIPs")+
+        ylab("Pheno2 PIPs")
+    }
     
     plot_susie_pip<-ggarrange(reg_coloc,pip_coloc,ncol=2,labels=c("a","b"))
     
   } else {
     plot_susie_pip<-NA
   }
+  
+  #plot_susie_pip
   
   if(plot_susie==TRUE){
     return(list(summary_res=summary_res,
@@ -695,14 +769,33 @@ for(i in 1:50){
                           plot_susie=opt$plot_susie,
                           continuous_trait=opt$continuous_trait,
                           n_clone=opt$n_clone,
-                          susie_L=opt$susie_L)
+                          susie_L=opt$susie_L,
+                          fix_alpha=opt$fix_alpha)
+  
+  # sim_entry<-simulate_hla(n_min_alleles=10,
+  #                         pheno2_mean_shared_factor=0,
+  #                         pheno2_variance_shared_factor=1,
+  #                         plot_predicted=TRUE,
+  #                         gen_var=0.4,
+  #                         haplotypes=hap,
+  #                         haplotypes_lm=hap_lm_ready,
+  #                         freq_threshold=0.005,
+  #                         genes=genes,
+  #                         all_causal_alleles=FALSE,
+  #                         plot_susie=FALSE,
+  #                         all_causal_genes=FALSE,
+  #                         continuous_trait=TRUE,
+  #                         negative_threshold=0.1,
+  #                         n_clone=10,
+  #                         susie_L=10,
+  #                         fix_alpha=FALSE)
   
   munged_sim<-sim_entry$summary_res %>%
     mutate(iteration=paste0(opt$iteration,".",i)) %>%
     bind_rows(munged_sim,.)
   
   if(opt$plot_susie==TRUE){
-    ggsave(paste0(opt$out, "susie_pip_plots_",anc,"_",opt$iteration,".",i,".pdf"),sim_entry$plot_susie)
+   ggsave(paste0(opt$out, "susie_pip_plots_",anc,"_",opt$iteration,".",i,".pdf"),sim_entry$plot_susie)
   }
 }
 
