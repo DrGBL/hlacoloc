@@ -133,14 +133,15 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
           dplyr::bind_rows(posteriors_fit,.)
 
         bayes_corr_df<-data.frame(gene=g,
-                                  bayes_pd=bayestestR::p_direction(bayes_lm)$pd[2],
+                                  odds_p_map=1/p_map(bayes_lm)$p_MAP[2],
                                   direction_of_correlation=ifelse(bayes_lm$coefficients[2] >= 0,
                                                                   "Correct",
                                                                   "Incorrect")) %>%
+          mutate(posterior_prob_map=ifelse(p_map(bayes_lm)$p_MAP[2]==0,1,odds_p_map/(1+odds_p_map))) %>%
           dplyr::bind_rows(bayes_corr_df,.)
       } else {
         bayes_corr_df<-data.frame(gene=g,
-                                  bayes_pd=0,
+                                  posterior_prob_map=0,
                                   direction_of_correlation="Not applicable") %>%
           dplyr::bind_rows(bayes_corr_df,.)
       }
@@ -150,9 +151,9 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
 
     full_final_summary<-full_final_summary %>%
       dplyr::left_join(.,bayes_corr_df) %>%
-      dplyr::mutate(hla_colocalization_probability=ifelse(is.na(.data$susie_coloc_prob) | is.na(.data$bayes_pd),
+      dplyr::mutate(hla_colocalization_probability=ifelse(is.na(.data$susie_coloc_prob) | is.na(.data$posterior_prob_map),
                                                     NA,
-                                                    .data$susie_coloc_prob*.data$bayes_pd)) %>%
+                                                    .data$susie_coloc_prob*.data$posterior_prob_map)) %>%
       dplyr::arrange(dplyr::desc(.data$hla_colocalization_probability),dplyr::desc(.data$susie_coloc_prob))
 
 
