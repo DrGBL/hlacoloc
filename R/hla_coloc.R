@@ -137,7 +137,7 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
                                   direction_of_correlation=ifelse(bayes_lm$coefficients[2] >= 0,
                                                                   "Correct",
                                                                   "Incorrect")) %>%
-          mutate(posterior_prob_map=ifelse(p_map(bayes_lm)$p_MAP[2]==0,1,odds_p_map/(1+odds_p_map))) %>%
+          dplyr::mutate(posterior_prob_map=ifelse(p_map(bayes_lm)$p_MAP[2]==0,1,odds_p_map/(1+odds_p_map))) %>%
           dplyr::bind_rows(bayes_corr_df,.)
       } else {
         bayes_corr_df<-data.frame(gene=g,
