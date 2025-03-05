@@ -206,12 +206,10 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
         annotate_df<-data.frame(gene=g,
                                 x=0.25,
                                 y=0.75,
-                                text_tmp=paste0("P_coloc: ", format(full_final_summary %>%
-                                                                  dplyr::filter(.data$gene==g) %>%
-                                                                  dplyr::pull(.data$hla_colocalization_probability), digits=2))) %>%
-          dplyr::bind_rows(annotate_df,)
-
-
+                                text_tmp=full_final_summary %>%
+                                  dplyr::filter(.data$gene==g) %>%
+                                  dplyr::pull(.data$hla_colocalization_probability)) %>%
+                                  dplyr::bind_rows(annotate_df,)
       }
 
       annotate_df<-annotate_df %>%
