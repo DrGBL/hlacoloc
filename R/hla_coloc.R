@@ -171,7 +171,7 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
                            max_y=NA)
         for(i in 1:nrow(df_reg)){
           gene_tmp<-(df_reg %>% dplyr::pull(.data$gene))[i]
-          mod<-lm(beta2~beta1-1, data=full_final %>% filter(.data$gene == gene_tmp))
+          mod<-lm(beta2~beta1-1, data=full_final %>% dplyr::filter(.data$gene == gene_tmp))
           df_reg$eq[i]<-as.character(as.expression(substitute(italic(y) == b %.% italic(x)*","~~italic(r)^2~"="~r2,
                                                               list(b = format(unname(coef(mod)[1]), digits = 2),
                                                                    r2 = format(summary(mod)$r.squared, digits = 2)))))
