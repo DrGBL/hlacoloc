@@ -19,6 +19,7 @@
 #' @param n_min_alleles Minimum number of alleles required at a gene in order to attempt HLA colocalization at that gene. Genes with less than this threshold will be excluded from the analyses (default=10).
 #' @param pheno1_name Name of pheno1, used for plotting only (default="Pheno1").
 #' @param pheno2_name Name of pheno2, used for plotting only (default="Pheno2").
+#' @param return_susie_output Whether to return the intermediate SuSiE output (default, TRUE) or not (FALSE).
 #'
 #' @importFrom graphics "text"
 #' @importFrom stats "gaussian"
@@ -32,7 +33,8 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
                     negative_threshold=0.001,
                     susie_L=10,n_min_alleles=10,
                     pheno1_name="Pheno1",
-                    pheno2_name="Pheno2"){
+                    pheno2_name="Pheno2",
+                    return_susie_output=TRUE){
 
   if( length(which(!pheno1$Name %in% pheno2$Name)) > 0 |
       length(which(!pheno2$Name %in% pheno1$Name)) > 0){
@@ -160,6 +162,7 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
       dplyr::arrange(dplyr::desc(.data$hla_colocalization_probability),dplyr::desc(.data$susie_coloc_prob))
 
 
+    result<-list(hla_colocalization=full_final_summary)
 
     if(plot_susie==TRUE){
       if(plot_assoc==TRUE & "beta" %in% colnames(pheno1) & "beta" %in% colnames(pheno2)){
@@ -237,13 +240,14 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
         plot_susie_pip<-pip_coloc
       }
 
-    } else {
-      plot_susie_pip<-NA
+      result$plot<-plot_susie_pip
+
     }
 
-    return(list(hla_colocalization=full_final_summary,
-                susie_intermediate_out=full_final,
-                plot=plot_susie_pip))
+    if(return_susie_output==TRUE){
+      result$susie_intermediate_out<-full_final
+
+    return(result)
 
   }
 }
