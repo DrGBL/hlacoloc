@@ -130,6 +130,24 @@ Right (b): the PIPs obtained from SuSiE, and the final probabilities of HLA colo
 
 ![image](https://github.com/user-attachments/assets/34a566e7-8fa7-4863-8ef7-241a681667f6)
 
+
+Lastly, if interested, users can retrieve the intermediate output from SuSiE, as a dataframe.
+
+```{r, fig.width = 8.5, fig.height = 11}
+head(coloc_res[["susie_intermediate_out"]])
+#> # A tibble: 6 × 11
+#>   Name           beta1    se1    N1   beta2    se2     N2 pip_pheno1 pip_pheno2
+#>   <chr>          <dbl>  <dbl> <int>   <dbl>  <dbl>  <int>      <dbl>      <dbl>
+#> 1 G*01:01:01  0.0141   0.0159  7247 -0.0828 0.0323 429822   0.000232   0.000250
+#> 2 G*01:04:04  0.0768   0.0709  7247  0.0593 0.144  429822   0.000458   0.000193
+#> 3 G*01:01:02 -0.0176   0.0190  7247 -0.0508 0.0431 429822   0.000318   0.000203
+#> 4 G*01:01:03  0.000932 0.0335  7247  0.121  0.0620 429822   0.000195   0.000189
+#> 5 G*01:05N   -0.293    0.0780  7247 -0.113  0.159  429822   0.00688    0.000312
+#> 6 G*01:06:01  0.00211  0.0351  7247  0.156  0.0598 429822   0.000183   0.000227
+#> # ℹ 2 more variables: coloc <dbl>, gene <chr>
+
+```
+
 ## Full list of inputs.
 
 `pheno1`: Dataframe of HLA allele associations for phenotype 1. Needs to contain the following columns:
@@ -164,3 +182,5 @@ Right (b): the PIPs obtained from SuSiE, and the final probabilities of HLA colo
 `susie_L`: Maximum number of alleles with non-zero effect in the susieR model (default=10).
 
 `n_min_alleles`: Minimum number of alleles required at a gene in order to attempt HLA colocalization at that gene. Genes with less than this threshold will be excluded from the analyses (default=10).
+
+`return_susie_output`: Whether to return the intermediate SuSiE output (default, TRUE) or not (FALSE).
