@@ -128,7 +128,7 @@ Left (a): the betas of the HLA allele summary statistics for the two traits.
 
 Right (b): the PIPs obtained from SuSiE, and the final probabilities of HLA colocalization.
 
-![image](https://github.com/user-attachments/assets/9d1ed252-f679-40f6-be6b-856b180bac50)
+![image](https://github.com/user-attachments/assets/34a566e7-8fa7-4863-8ef7-241a681667f6)
 
 ## Full list of inputs.
 
