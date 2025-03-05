@@ -242,6 +242,7 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
     }
 
     return(list(hla_colocalization=full_final_summary,
+                susie_intermediate_out=full_final,
                 plot=plot_susie_pip))
 
   }
