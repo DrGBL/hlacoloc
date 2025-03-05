@@ -1,8 +1,8 @@
 ---
 title: "vignette"
 output:
-  pdf_document: default
   word_document: default
+  pdf_document: default
 vignette: "%\\VignetteIndexEntry{vignette} %\\VignetteEngine{knitr::rmarkdown} %\\VignetteEncoding{UTF-8}\n"
 ---
 
@@ -91,4 +91,10 @@ Right (b): the PIPs obtained from SuSiE, and the final probabilities of HLA colo
 
 ```{r, fig.width = 8.5, fig.height = 11}
 coloc_res[["plot"]]
+```
+
+
+Lastly, if interested, users can retrieve the intermediate output from SuSiE, as a dataframe.
+```{r, fig.width = 8.5, fig.height = 11}
+head(coloc_res[["susie_intermediate_out"]])
 ```
