@@ -157,8 +157,8 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
     full_final_summary<-full_final_summary %>%
       dplyr::left_join(.,bayes_corr_df) %>%
       dplyr::mutate(hla_colocalization_probability=ifelse(is.na(.data$susie_coloc_prob) | is.na(.data$bayes_pd),
-                                                    NA,
-                                                    .data$susie_coloc_prob*(.data$bayes_pd-0.5)*2)) %>%
+                                                          NA,
+                                                          .data$susie_coloc_prob*(.data$bayes_pd-0.5)*2)) %>%
       dplyr::arrange(dplyr::desc(.data$hla_colocalization_probability),dplyr::desc(.data$susie_coloc_prob))
 
 
@@ -212,7 +212,7 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
                                 text_tmp=full_final_summary %>%
                                   dplyr::filter(.data$gene==g) %>%
                                   dplyr::pull(.data$hla_colocalization_probability)) %>%
-                                  dplyr::bind_rows(annotate_df,)
+          dplyr::bind_rows(annotate_df,)
       }
 
       annotate_df<-annotate_df %>%
@@ -247,7 +247,8 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
     if(return_susie_output==TRUE){
       result$susie_intermediate_out<-full_final
 
-    return(result)
+      return(result)
 
+    }
   }
 }
