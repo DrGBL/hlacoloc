@@ -154,6 +154,10 @@ Right (b): the PIPs obtained from SuSiE, and the final probabilities of HLA colo
 
 `plot_assoc`: Whether to plot the HLA allele association results. This is automatically set to FALSE if the beta of the HLA allele association tests are not available, or if plot_susie is set to false.
 
+`pheno1_name`: Name of pheno1, used for plotting only (default="Pheno1").
+
+`pheno2_name`: Name of pheno2, used for plotting only (default="Pheno2").
+
 `negative_threshold`: Minimum susieR posterior inclusion probability needed for both phenotypoes in order to check for colocalization using stanR (default=0.001).
 
 `susie_L`: Maximum number of alleles with non-zero effect in the susieR model (default=10).
