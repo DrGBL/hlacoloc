@@ -137,7 +137,7 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
           dplyr::bind_rows(posteriors_fit,.)
 
         bayes_corr_df<-data.frame(gene=g,
-                                  bayes_pd=p_direction(bayes_lm)$pd[2],
+                                  bayes_pd=bayestestR::p_direction(bayes_lm)$pd[2],
                                   direction_of_correlation=ifelse(bayes_lm$coefficients[2] >= 0,
                                                                   "Correct",
                                                                   "Incorrect")) %>%
