@@ -193,7 +193,7 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
           ggplot2::ggplot(ggplot2::aes(x=.data$beta1,y=.data$beta2))+
           ggplot2::geom_point()+
           ggplot2::geom_smooth(method="lm",formula=y~x-1)+
-          ggplot2::geom_text(aes(label=eq, x=0.8*min_x+0.2*max_x, y=0.1*min_y+0.9*max_y),data=df_reg,parse = TRUE, size=3)+
+          ggplot2::geom_text(ggplot2::aes(label=eq, x=0.8*min_x+0.2*max_x, y=0.1*min_y+0.9*max_y),data=df_reg,parse = TRUE, size=3)+
           ggplot2::facet_wrap(~gene, scales="free",ncol=1)+
           ggplot2::theme_bw()+
           ggplot2::xlab(paste0(pheno1_name," Betas"))+
