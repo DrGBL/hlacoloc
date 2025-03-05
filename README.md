@@ -102,18 +102,17 @@ The colocalization table includes 5 columns
 
 ```{r, fig.width = 8.5, fig.height = 11}
 coloc_res[["hla_colocalization"]]
-#> # A tibble: 9 × 5
 #>   gene  susie_coloc_prob bayes_pd direction_of_correlat…¹ hla_colocalization_p…²
 #>   <chr>            <dbl>    <dbl> <chr>                                    <dbl>
-#> 1 DQB1        1.00          1     Correct                             1.00      
-#> 2 DRB1        0.990         0.921 Correct                             0.911     
-#> 3 DPB1        0.0856        1     Correct                             0.0856    
-#> 4 H           0.00349       0.997 Correct                             0.00348   
-#> 5 DQA1        0.00129       0.707 Correct                             0.000911  
-#> 6 B           0.000803      0.780 Incorrect                           0.000627  
-#> 7 C           0.000192      0.685 Incorrect                           0.000132  
-#> 8 A           0.000152      0.742 Correct                             0.000113  
-#> 9 G           0.00000352    0.554 Correct                             0.00000195
+#> 1 DQB1        1.00          1     Correct                            1.00       
+#> 2 DRB1        0.990         0.924 Correct                            0.839      
+#> 3 DPB1        0.0856        1.00  Correct                            0.0855     
+#> 4 H           0.00349       0.994 Correct                            0.00345    
+#> 5 DQA1        0.00129       0.748 Correct                            0.000639   
+#> 6 B           0.000803      0.772 Incorrect                          0.000437   
+#> 7 A           0.000152      0.752 Correct                            0.0000767  
+#> 8 C           0.000192      0.695 Incorrect                          0.0000750  
+#> 9 G           0.00000352    0.546 Correct                            0.000000325
 #> # ℹ abbreviated names: ¹direction_of_correlation,
 #> #   ²hla_colocalization_probability
 ```
@@ -127,7 +126,7 @@ Left (a): the betas of the HLA allele summary statistics for the two traits.
 
 Right (b): the PIPs obtained from SuSiE, and the final probabilities of HLA colocalization.
 
-![image](https://github.com/user-attachments/assets/81981222-f07f-4e1f-a2bf-5b0eb7b1f613)
+![image](https://github.com/user-attachments/assets/9d1ed252-f679-40f6-be6b-856b180bac50)
 
 ## Full list of inputs.
 
