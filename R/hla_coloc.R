@@ -17,6 +17,8 @@
 #' @param negative_threshold Minimum susieR posterior inclusion probability needed for both phenotypoes in order to check for colocalization using stanR (default=0.001).
 #' @param susie_L Maximum number of alleles with non-zero effect in the susieR model (default=10).
 #' @param n_min_alleles Minimum number of alleles required at a gene in order to attempt HLA colocalization at that gene. Genes with less than this threshold will be excluded from the analyses (default=10).
+#' @param pheno1_name Name of pheno1, used for plotting only (default="Pheno1").
+#' @param pheno2_name Name of pheno2, used for plotting only (default="Pheno2").
 #'
 #' @importFrom graphics "text"
 #' @importFrom stats "gaussian"
@@ -28,7 +30,9 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
                     pheno2,pheno2R,is_cohort_ld_pheno2=FALSE,
                     max_iter_susieR=100,plot_susie=TRUE,plot_assoc=TRUE,
                     negative_threshold=0.001,
-                    susie_L=10,n_min_alleles=10){
+                    susie_L=10,n_min_alleles=10,
+                    pheno1_name="Pheno1",
+                    pheno2_name="Pheno2"){
 
   if( length(which(!pheno1$Name %in% pheno2$Name)) > 0 |
       length(which(!pheno2$Name %in% pheno1$Name)) > 0){
@@ -133,15 +137,14 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
           dplyr::bind_rows(posteriors_fit,.)
 
         bayes_corr_df<-data.frame(gene=g,
-                                  odds_p_map=1/bayestestR::p_map(bayes_lm)$p_MAP[2],
+                                  bayes_pd=p_direction(bayes_lm)$pd[2],
                                   direction_of_correlation=ifelse(bayes_lm$coefficients[2] >= 0,
                                                                   "Correct",
                                                                   "Incorrect")) %>%
-          dplyr::mutate(posterior_prob_map=ifelse(odds_p_map==0,1,odds_p_map/(1+odds_p_map))) %>%
           dplyr::bind_rows(bayes_corr_df,.)
       } else {
         bayes_corr_df<-data.frame(gene=g,
-                                  posterior_prob_map=0,
+                                  bayes_pd=0.5,
                                   direction_of_correlation="Not applicable") %>%
           dplyr::bind_rows(bayes_corr_df,.)
       }
@@ -151,9 +154,9 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
 
     full_final_summary<-full_final_summary %>%
       dplyr::left_join(.,bayes_corr_df) %>%
-      dplyr::mutate(hla_colocalization_probability=ifelse(is.na(.data$susie_coloc_prob) | is.na(.data$posterior_prob_map),
+      dplyr::mutate(hla_colocalization_probability=ifelse(is.na(.data$susie_coloc_prob) | is.na(.data$bayes_pd),
                                                     NA,
-                                                    .data$susie_coloc_prob*.data$posterior_prob_map)) %>%
+                                                    .data$susie_coloc_prob*(.data$bayes_pd-0.5)*2)) %>%
       dplyr::arrange(dplyr::desc(.data$hla_colocalization_probability),dplyr::desc(.data$susie_coloc_prob))
 
 
@@ -166,8 +169,8 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
           ggplot2::geom_smooth(method="lm",formula=y~x-1)+
           ggplot2::facet_wrap(~gene, scales="free",ncol=1)+
           ggplot2::theme_bw()+
-          ggplot2::xlab("Pheno1 Betas")+
-          ggplot2::ylab("Pheno2 Betas")
+          ggplot2::xlab(paste0(pheno1_name," Betas"))+
+          ggplot2::ylab(paste0(pheno2_name," Betas"))
       }
 
       annotate_df<-c()
@@ -193,8 +196,8 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
         ggplot2::facet_wrap(~gene,ncol=1)+
         ggplot2::theme_bw()+
         ggplot2::coord_cartesian(ylim = c(0, 1), xlim = c(0,1))+
-        ggplot2::xlab("Pheno1 PIPs")+
-        ggplot2::ylab("Pheno2 PIPs")
+        ggplot2::xlab(paste0(pheno1_name," PIPs"))+
+        ggplot2::ylab(paste0(pheno2_name," PIPs"))
 
       if(plot_assoc==TRUE & "beta" %in% colnames(pheno1) & "beta" %in% colnames(pheno2)){
         plot_susie_pip<-ggpubr::ggarrange(reg_coloc,pip_coloc,ncol=2,labels=c("a","b"))
