@@ -163,14 +163,14 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
 
     if(plot_susie==TRUE){
       if(plot_assoc==TRUE & "beta" %in% colnames(pheno1) & "beta" %in% colnames(pheno2)){
-        df_reg<-data.frame(gene=full_final %>% dplyr::pull(.data$gene),
+        df_reg<-data.frame(gene=full_final %>% dplyr::pull(.data$gene) %>% unique(),
                            eq=NA,
                            min_x=NA,
                            max_x=NA,
                            min_y=NA,
                            max_y=NA)
-        for(i in 1:nrow(full_final)){
-          gene_tmp<-(full_final %>% dplyr::pull(.data$gene))[i]
+        for(i in 1:nrow(df_reg)){
+          gene_tmp<-(df_reg %>% dplyr::pull(.data$gene))[i]
           mod<-lm(beta2~beta1-1, data=full_final %>% filter(.data$gene == gene_tmp))
           df_reg$eq[i]<-as.character(as.expression(substitute(italic(y) == b %.% italic(x)*","~~italic(r)^2~"="~r2,
                                                               list(b = format(unname(coef(mod)[1]), digits = 2),
