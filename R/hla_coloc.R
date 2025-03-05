@@ -215,11 +215,11 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
       }
 
       annotate_df<-annotate_df %>%
-        dplyr::mutate(.data$text_tmp=ifelse(is.na(.data$text_tmp),0,text_tmp)) %>%
-        dplyr::mutate(.data$text_tmp=label_percent()(.data$text_tmp)) %>%
-        dplyr::mutate(.data$text=paste0("P_coloc: ", .data$text_tmp)) %>%
+        dplyr::mutate(text_tmp=ifelse(is.na(.data$text_tmp),0,.data$text_tmp)) %>%
+        dplyr::mutate(text_tmp=label_percent()(.data$text_tmp)) %>%
+        dplyr::mutate(text=paste0("P_coloc: ", .data$text_tmp)) %>%
         dplyr::select(-.data$text_tmp) %>%
-        dplyr::mutate(.data$text=paste0(stringr::str_extract(.data$text,"P_coloc: [0-9]*\\.[0-9]"),"%"))
+        dplyr::mutate(text=paste0(stringr::str_extract(.data$text,"P_coloc: [0-9]*\\.[0-9]"),"%"))
 
       pip_coloc<-full_final %>%
         ggplot2::ggplot(ggplot2::aes(x=.data$pip_pheno1,y=.data$pip_pheno2))+
