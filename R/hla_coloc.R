@@ -163,30 +163,30 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
 
     if(plot_susie==TRUE){
       if(plot_assoc==TRUE & "beta" %in% colnames(pheno1) & "beta" %in% colnames(pheno2)){
-        df_reg<-data.frame(gene=full_final %>% dplyr::pull(gene),
+        df_reg<-data.frame(gene=full_final %>% dplyr::pull(.data$gene),
                            eq=NA,
                            min_x=NA,
                            max_x=NA,
                            min_y=NA,
                            max_y=NA)
         for(i in 1:nrow(full_final)){
-          gene_tmp<-(full_final %>% dplyr::pull(gene))[i]
-          mod<-lm(beta2~beta1-1, data=full_final %>% filter(gene == gene_tmp))
+          gene_tmp<-(full_final %>% dplyr::pull(.data$gene))[i]
+          mod<-lm(beta2~beta1-1, data=full_final %>% filter(.data$gene == gene_tmp))
           df_reg$eq[i]<-as.character(as.expression(substitute(italic(y) == b %.% italic(x)*","~~italic(r)^2~"="~r2,
                                                               list(b = format(unname(coef(mod)[1]), digits = 2),
                                                                    r2 = format(summary(mod)$r.squared, digits = 2)))))
           df_reg$min_x[i]<-min(full_final %>%
-                                 dplyr::filter(gene == gene_tmp) %>%
-                                 dplyr::pull(beta1))
+                                 dplyr::filter(.data$gene == gene_tmp) %>%
+                                 dplyr::pull(.data$beta1))
           df_reg$max_x[i]<-max(full_final %>%
-                                 dplyr::filter(gene == gene_tmp) %>%
-                                 dplyr::pull(beta1))
+                                 dplyr::filter(.data$gene == gene_tmp) %>%
+                                 dplyr::pull(.data$beta1))
           df_reg$min_y[i]<-min(df_reg$min_x[i]*coef(mod)[1],min(full_final %>%
-                                                                  dplyr::filter(gene == gene_tmp) %>%
-                                                                  dplyr::pull(beta2)))
+                                                                  dplyr::filter(.data$gene == gene_tmp) %>%
+                                                                  dplyr::pull(.data$beta2)))
           df_reg$max_y[i]<-max(df_reg$max_x[i]*coef(mod)[1],max(full_final %>%
-                                                                  dplyr::filter(gene == gene_tmp) %>%
-                                                                  dplyr::pull(beta2)))
+                                                                  dplyr::filter(.data$gene == gene_tmp) %>%
+                                                                  dplyr::pull(.data$beta2)))
         }
 
         reg_coloc<-full_final %>%
