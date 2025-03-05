@@ -86,8 +86,10 @@ This performs the 2 steps described above in one command.
 ```{r, results = "hide"}
 coloc_res<-hla_coloc(pheno1=ebna,
                     pheno1R=r_ebna,
+                    pheno1_name="EBNA",
                     pheno2=ms,
-                    pheno2R=r_ms)
+                    pheno2R=r_ms,
+                    pheno2_name="Multiple sclerosis")
 ```
 
 ### Results:
