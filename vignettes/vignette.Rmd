@@ -65,8 +65,10 @@ This performs the 2 steps described above in one command.
 ```{r, results = "hide"}
 coloc_res<-hla_coloc(pheno1=ebna,
                     pheno1R=r_ebna,
+                    pheno1_name="EBNA",
                     pheno2=ms,
-                    pheno2R=r_ms)
+                    pheno2R=r_ms,
+                    pheno2_name="Multiple sclerosis")
 ```
 
 ### Results:
@@ -86,8 +88,6 @@ coloc_res[["hla_colocalization"]]
 The plot has two columns.
 Left (a): the betas of the HLA allele summary statistics for the two traits.
 Right (b): the PIPs obtained from SuSiE, and the final probabilities of HLA colocalization.
-
-![image](https://github.com/user-attachments/assets/ef19c6fe-3501-4f4c-a574-e15595f47930)
 
 ```{r, fig.width = 8.5, fig.height = 11}
 coloc_res[["plot"]]
