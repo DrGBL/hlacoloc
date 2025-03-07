@@ -11,6 +11,8 @@ option_list = list(
               help="path to file containing IDs of cohort", metavar="character"),
   make_option(c("--call_folder"), type="character", default=NULL,
               help="path to folder with QCed calls", metavar="character"),
+  make_option(c("--ld_folder"), type="character", default=NULL,
+              help="path to folder with LD matrix", metavar="character"),
   make_option(c("--af_folder"), type="character", default=NULL,
               help="path to folder with af and counts", metavar="character"),
   make_option(c("--bim_folder"), type="character", default=NULL,
@@ -673,9 +675,9 @@ simulate_hla<-function(n_min_alleles=10,
     mutate(colocalizes_frequentist=ifelse(is.na(colocalizes_frequentist),
                                           FALSE,
                                           colocalizes_frequentist)) %>%
-    mutate(bayesian_prob=ifelse(is.na(susie_coloc_prob) | is.na(posterior_prob_map),
+    mutate(bayesian_prob=ifelse(is.na(susie_coloc_prob) | is.na(bayes_pd),
                                   NA,
-                                  susie_coloc_prob*posterior_prob_map)) %>%
+                                  susie_coloc_prob*(bayes_pd-0.5)*2)) %>%
     arrange(desc(shared_genetics),desc(bayesian_prob),desc(susie_coloc_prob),correlation_p,desc(var_pheno1),desc(var_pheno2)) %>%
     left_join(.,min_p_pheno1) %>%
     left_join(.,min_p_pheno2) %>%
