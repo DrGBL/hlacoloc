@@ -1,5 +1,5 @@
 # hlacoloc
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13989351.svg)](https://doi.org/10.5281/zenodo.13989351)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15073593.svg)](https://doi.org/10.5281/zenodo.15073593)
 
 Colocalization for the HLA region. See the vignette pdf or instructions below for information on how to make the method work.
 
