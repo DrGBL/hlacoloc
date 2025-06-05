@@ -41,7 +41,18 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
     print("Not same alleles in both cohorts.")
   } else if(all(pheno1$Name==pheno2$Name)==FALSE) {
     print("Alleles not in same order in both cohorts.")
+  } else if (nrow(pheno1)!= nrow(pheno1R) | nrow(pheno1)!=ncol(pheno1R) |
+             nrow(pheno2)!= nrow(pheno2R) | nrow(pheno2)!=ncol(pheno2R)){
+    print("LD reference matrix dimensions differ from number of alleles in summary statistics data frame.")
   } else {
+
+    pos_to_keep<-prune_genes(pheno1,n_min_alleles)
+
+    pheno1<-pheno1[pos_to_keep,]
+    pheno2<-pheno2[pos_to_keep,]
+    pheno1R<-pheno1R[pos_to_keep,pos_to_keep]
+    pheno2R<-pheno2R[pos_to_keep,pos_to_keep]
+
     if("z" %in% colnames(pheno1)){
       susie_pheno1<-susieR::susie_rss(R=as.matrix(pheno1R),
                                       z=pheno1$z,
@@ -251,4 +262,22 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
 
     }
   }
+}
+
+#' Remove genes with less than n_min_alleles
+#'
+#' @param pheno1 Dataframe of HLA allele associations for phenotype 1.
+#' @param n_min_alleles Minimum number of alleles required at a gene in order to attempt HLA colocalization at that gene. Genes with less than this threshold will be excluded from the analyses (default=10).
+#'
+#' @return Positions to keep in pheno1, pheno2, pheno1R, pheno2R.
+#' @export
+prune_genes<-function(pheno1,
+                      n_min_alleles){
+  pheno1<-pheno1 %>%
+    dplyr::mutate(gene=stringr::str_extract(Name,"^[A-Z0-9\\-_]*")) %>%
+    dplyr::group_by(gene) %>%
+    dplyr::mutate(N_alleles=dplyr::n()) %>%
+    dplyr::ungroup()
+  pos_to_keep<-which(pheno1$N_alleles>=n_min_alleles)
+  return(pos_to_keep)
 }
