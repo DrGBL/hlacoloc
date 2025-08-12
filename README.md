@@ -23,7 +23,7 @@ HLA-coloc performs colocalization in two steps, as described in the manuscript. 
 The following dataframes are necessary to run it (for each of the two phenotypes):
 
 1. The HLA association summary statistics. This is a dataframe with the following columns:
-  - `Name`: the name of the allele. These must be given in IMGT-HLA format, but can be of any field resolution though (as long as it's the same for both phenotypes).
+  - `Name`: the name of the allele. These must be given in IMGT-HLA format (i.e. with an asterisk separating the gene and the allele number), but can be of any field resolution though (as long as it's the same for both phenotypes).
   - `z`: the z-scores of the associations.
   - `beta`: the beta of the associations (if `z` is not provided).
   - `se`: the standard errors (if `z` is not provided).
