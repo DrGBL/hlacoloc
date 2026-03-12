@@ -14,6 +14,7 @@
 #' @param max_iter_susieR Maximum number of iterations for susieR (default=100).
 #' @param plot_susie Whether to plot the results (TRUE/FALSE). This is automatically set to FALSE if the beta of the HLA allele association tests are not available.
 #' @param plot_assoc Whether to plot the HLA allele association results. This is automatically set to FALSE if the beta of the HLA allele association tests are not available, or if plot_susie is set to false.
+#' @param error_bars If the user wishes to add standard error bars to the HLA allele association results (if plot_asso is TRUE), then this gives the factor by which to multiply the standard error to be displayed on the error bars (default=0, i.e. no error bars).
 #' @param negative_threshold Minimum susieR posterior inclusion probability needed for both phenotypoes in order to check for colocalization using stanR (default=0.001).
 #' @param susie_L Maximum number of alleles with non-zero effect in the susieR model (default=10).
 #' @param n_min_alleles Minimum number of alleles required at a gene in order to attempt HLA colocalization at that gene. Genes with less than this threshold will be excluded from the analyses (default=10).
@@ -29,7 +30,7 @@
 #' @export
 hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
                     pheno2,pheno2R,is_cohort_ld_pheno2=FALSE,
-                    max_iter_susieR=100,plot_susie=TRUE,plot_assoc=TRUE,
+                    max_iter_susieR=100,plot_susie=TRUE,plot_assoc=TRUE,error_bars=0,
                     negative_threshold=0.001,
                     susie_L=10,n_min_alleles=10,
                     pheno1_name="Pheno1",
@@ -204,14 +205,28 @@ hla_coloc<-function(pheno1,pheno1R,is_cohort_ld_pheno1=FALSE,
         }
 
         reg_coloc<-full_final %>%
+          dplyr::group_by(gene) %>%
+          dplyr::mutate(x_min = min(beta1, na.rm = TRUE),
+                        x_max = max(beta1, na.rm = TRUE),
+                        y_min = min(beta2, na.rm = TRUE),
+                        y_max = max(beta2, na.rm = TRUE),
+                        # compute error bar bounds, clamped to point range
+                        xmin_bar = pmax(beta1 - error_bars * se1, x_min),
+                        xmax_bar = pmin(beta1 + error_bars * se1, x_max),
+                        ymin_bar = pmax(beta2 - error_bars * se2, y_min),
+                        ymax_bar = pmin(beta2 + error_bars * se2, y_max)) %>%
+          dplyr::ungroup() %>%
           ggplot2::ggplot(ggplot2::aes(x=.data$beta1,y=.data$beta2))+
           ggplot2::geom_point()+
+          ggplot2::geom_errorbar(aes(ymin = .data$ymin_bar, ymax = .data$ymax_bar))+
+          ggplot2::geom_errorbar(aes(xmin = .data$xmin_bar, xmax = .data$xmax_bar), orientation = "y")+
           ggplot2::geom_smooth(method="lm",formula=y~x-1)+
           ggplot2::geom_text(ggplot2::aes(label=eq, x=0.8*min_x+0.2*max_x, y=0.1*min_y+0.9*max_y),data=df_reg,parse = TRUE, size=3)+
           ggplot2::facet_wrap(~gene, scales="free",ncol=1)+
           ggplot2::theme_bw()+
           ggplot2::xlab(paste0(pheno1_name," Betas"))+
           ggplot2::ylab(paste0(pheno2_name," Betas"))
+
       }
 
       annotate_df<-c()
