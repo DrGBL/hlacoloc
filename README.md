@@ -173,6 +173,8 @@ head(coloc_res[["susie_intermediate_out"]])
 
 `plot_assoc`: Whether to plot the HLA allele association results. This is automatically set to FALSE if the beta of the HLA allele association tests are not available, or if plot_susie is set to false.
 
+`error_bars`: If the user wishes to add standard error bars to the HLA allele association results (if plot_asso is TRUE), then this gives the factor by which to multiply the standard error to be displayed on the error bars (default=0, i.e. no error bars).
+
 `pheno1_name`: Name of pheno1, used for plotting only (default="Pheno1").
 
 `pheno2_name`: Name of pheno2, used for plotting only (default="Pheno2").
