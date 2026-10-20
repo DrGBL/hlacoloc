@@ -8,7 +8,8 @@ You can install this package to your cluster using ***install_github("DrGBL/hlac
 More information can be found on the preprint available here: https://www.medrxiv.org/content/10.1101/2024.11.05.24316783v1
 
 ## How to cite HLA-coloc
-To come.
+
+Please cite the following paper if you use the method: https://pubmed.ncbi.nlm.nih.gov/42174329/
 
 ## General steps performed by HLA-coloc
 
