@@ -5,7 +5,7 @@ Colocalization for the HLA region. See the vignette pdf or instructions below fo
 
 You can install this package to your cluster using ***install_github("DrGBL/hlacoloc")*** with either ***devtools*** or ***remotes***.
 
-More information can be found on the preprint available here: https://www.medrxiv.org/content/10.1101/2024.11.05.24316783v1
+More information can be found on the preprint available here: https://pubmed.ncbi.nlm.nih.gov/42174329/
 
 ## How to cite HLA-coloc
 
