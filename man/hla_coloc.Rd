@@ -13,17 +13,23 @@ hla_coloc(
   is_cohort_ld_pheno2 = FALSE,
   max_iter_susieR = 100,
   plot_susie = TRUE,
+  plot_assoc = TRUE,
+  error_bars = 0,
+  pheno1_name = "Pheno1",
+  pheno2_name = "Pheno2",
   negative_threshold = 0.001,
   susie_L = 10,
-  n_min_alleles = 10
+  n_min_alleles = 10,
+  return_susie_output = TRUE
 )
 }
 \arguments{
-\item{pheno1}{Dataframe of HLA allele associations for phenotype 1. Needs to contain the following four columns:
+\item{pheno1}{Dataframe of HLA allele associations for phenotype 1. Needs to contain the following columns:
 \itemize{
 \item \code{Name}: the name of the HLA allele in the IMGT-HLA format.
-\item \code{beta}: the beta (effect sizes) of the HLA allele association.
-\item \code{se}: the standard error.
+\item \code{z}: the z-score of the HLA allele association.
+\item \code{beta}: the beta (effect sizes) of the HLA allele association (required if z-score not provided).
+\item \code{se}: the standard error (required if z-score not provided).
 \item \code{N}: the sample size.
 }}
 
@@ -39,13 +45,23 @@ hla_coloc(
 
 \item{max_iter_susieR}{Maximum number of iterations for susieR (default=100).}
 
-\item{plot_susie}{Whether to plot the results (TRUE/FALSE).}
+\item{plot_susie}{Whether to plot the results (TRUE/FALSE). This is automatically set to FALSE if the beta of the HLA allele association tests are not available.}
+
+\item{plot_assoc}{Whether to plot the HLA allele association results. This is automatically set to FALSE if the beta of the HLA allele association tests are not available, or if plot_susie is set to false.}
+
+\item{error_bars}{If the user wishes to add standard error bars to the HLA allele association results (if plot_asso is TRUE), then this gives the factor by which to multiply the standard error to be displayed on the error bars (default=0, i.e. no error bars).}
+
+\item{pheno1_name}{Name of pheno1, used for plotting only (default="Pheno1").}
+
+\item{pheno2_name}{Name of pheno2, used for plotting only (default="Pheno2").}
 
 \item{negative_threshold}{Minimum susieR posterior inclusion probability needed for both phenotypoes in order to check for colocalization using stanR (default=0.001).}
 
 \item{susie_L}{Maximum number of alleles with non-zero effect in the susieR model (default=10).}
 
 \item{n_min_alleles}{Minimum number of alleles required at a gene in order to attempt HLA colocalization at that gene. Genes with less than this threshold will be excluded from the analyses (default=10).}
+
+\item{return_susie_output}{Whether to return the intermediate SuSiE output (default, TRUE) or not (FALSE).}
 }
 \value{
 List with a dataframe containing the colocalization result, and a plot of the results (optional).
